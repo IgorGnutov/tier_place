@@ -1,0 +1,153 @@
+.contacts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+
+.contacts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.contacts-item {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+.contacts-item__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(244, 122, 31, 0.14);
+  color: var(--color-accent-light);
+}
+
+.contacts-item h3 {
+  font-size: 1rem;
+  margin-bottom: 0.2em;
+}
+
+.contacts-item p,
+.contacts-item a {
+  margin: 0;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.contacts-item a.contacts-phone-link {
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.contacts-socials {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-text);
+  transition: color var(--transition), border-color var(--transition), background-color var(--transition), transform var(--transition);
+}
+
+.social-icon:hover,
+.social-icon:focus-visible {
+  color: var(--color-accent-contrast);
+  background: var(--gradient-accent);
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.map-wrap {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-bg-raised);
+  box-shadow: var(--shadow-md);
+}
+
+.map-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  text-align: center;
+  padding: var(--space-sm);
+}
+
+.map-wrap iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+/* Плаваюча кнопка Telegram */
+.floating-cta {
+  position: fixed;
+  right: var(--space-sm);
+  bottom: var(--space-sm);
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gradient-accent);
+  color: var(--color-accent-contrast);
+  box-shadow: var(--shadow-accent);
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+  transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
+}
+
+.floating-cta.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.floating-cta:hover,
+.floating-cta:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px -8px rgba(244, 122, 31, 0.55);
+}
+
+@media (min-width: 768px) {
+  .contacts-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  }
+
+  .map-wrap {
+    aspect-ratio: 16 / 10;
+  }
+}

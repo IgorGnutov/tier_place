@@ -1,0 +1,19 @@
+{
+  "name": "TIRE PLACE — автомагазин шин, дисків та акумуляторів",
+  "short_name": "TIRE PLACE",
+  "description": "Твій шинний простір. Шини, диски, акумулятори та шиномонтаж у Кривому Розі.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#20242f",
+  "theme_color": "#20242f",
+  "lang": "uk",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

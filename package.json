@@ -1,0 +1,23 @@
+{
+  "name": "tire-place",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Автомагазин TIRE PLACE — шини, диски, акумулятори, шиномонтаж (Кривий Ріг)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "optimize:photos": "node scripts/optimize-photos.mjs"
+  },
+  "dependencies": {
+    "papaparse": "^5.5.4"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.3.14",
+    "sharp": "^0.35.3",
+    "typescript": "^5.6.3",
+    "vite": "^8.1.5"
+  }
+}

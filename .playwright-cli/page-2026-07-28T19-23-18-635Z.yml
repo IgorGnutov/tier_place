@@ -1,0 +1,285 @@
+- generic [active] [ref=e1]:
+  - link "Перейти до основного контенту" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "TIRE PLACE — на головну" [ref=e5] [cursor=pointer]:
+        - /url: "#home"
+        - generic [ref=e6]:
+          - generic [ref=e7]: TIRE
+          - generic [ref=e8]: PLACE
+      - generic [ref=e9]:
+        - 'link "Подзвонити: +38 (098) 071-93-93" [ref=e10] [cursor=pointer]':
+          - /url: tel:+380980719393
+        - button "Відкрити меню" [ref=e13] [cursor=pointer]
+  - main [ref=e16]:
+    - generic [ref=e18]:
+      - heading "Автомагазин TIRE PLACE" [level=1] [ref=e19]:
+        - text: Автомагазин
+        - generic [ref=e20]: TIRE PLACE
+      - paragraph [ref=e21]: Твій шинний простір
+      - paragraph [ref=e22]: Шини, диски та акумулятори в Кривому Розі. Власний шиномонтаж на авторинку «Термінал» — підбір за розміром і монтаж на місці.
+      - list [ref=e23]:
+        - listitem [ref=e24]: ✓ В наявності на складі
+        - listitem [ref=e25]: ✓ Підбір шин і дисків за розміром авто
+        - listitem [ref=e26]: ✓ Монтаж на місці за 20–40 хв
+      - generic [ref=e27]:
+        - link "Купити шини та диски" [ref=e28] [cursor=pointer]:
+          - /url: "#tires"
+        - link "Записатись на шиномонтаж" [ref=e29] [cursor=pointer]:
+          - /url: "#service"
+    - generic [ref=e30]:
+      - generic "Фото автомагазину TIRE PLACE, Кривий Ріг" [ref=e31]:
+        - generic [ref=e32]:
+          - group "1 з 2" [ref=e33]:
+            - img "Вивіска автомагазину TIRE PLACE на авторинку «Термінал» у Кривому Розі — шини, диски, акумулятори" [ref=e35]
+          - group "2 з 2" [ref=e36]:
+            - img "Легкові шини в наявності на стелажах в автомагазині TIRE PLACE, Кривий Ріг" [ref=e38]
+        - generic [ref=e39]:
+          - button "Попереднє фото" [ref=e40] [cursor=pointer]: ‹
+          - button "Наступне фото" [ref=e41] [cursor=pointer]: ›
+        - tablist "Вибір слайду" [ref=e42]:
+          - tab "Слайд 1 з 2" [ref=e43] [cursor=pointer]
+          - tab "Слайд 2 з 2" [ref=e44] [cursor=pointer]
+        - button "Пауза автоперемикання слайдів" [ref=e45] [cursor=pointer]: ❚❚
+        - paragraph [ref=e46]: Слайд 1 з 2
+      - paragraph [ref=e47]: Фото нашого магазину на авторинку «Термінал»
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - generic [ref=e51]: Каталог
+        - heading "Шини та диски у Кривому Розі" [level=2] [ref=e52]
+        - paragraph [ref=e53]: Підберіть легкові, зимові чи всесезонні шини чи диски за параметрами вашого авто — дані оновлюються автоматично з нашого прайсу.
+      - tablist "Каталог шин і дисків" [ref=e54]:
+        - tab "Шини" [selected] [ref=e55] [cursor=pointer]
+        - tab "Диски" [ref=e56] [cursor=pointer]
+      - tabpanel "Шини" [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - generic [ref=e61]: Ширина
+              - combobox "Ширина" [ref=e62]:
+                - option "Будь-яка" [selected]
+            - generic [ref=e63]:
+              - generic [ref=e64]: Профіль
+              - combobox "Профіль" [ref=e65]:
+                - option "Будь-який" [selected]
+            - generic [ref=e66]:
+              - generic [ref=e67]: Діаметр (R)
+              - combobox "Діаметр (R)" [ref=e68]:
+                - option "Будь-який" [selected]
+            - generic [ref=e69]:
+              - generic [ref=e70]: Сезон
+              - combobox "Сезон" [ref=e71]:
+                - option "Будь-який" [selected]
+            - generic [ref=e72]:
+              - generic [ref=e73]: Шипи
+              - combobox "Шипи" [ref=e74]:
+                - option "Не важливо" [selected]
+            - generic [ref=e75]:
+              - generic [ref=e76]: Бренд
+              - combobox "Бренд" [ref=e77]:
+                - option "Будь-який" [selected]
+            - generic [ref=e78]:
+              - generic [ref=e79]: Ціна, грн
+              - generic [ref=e80]:
+                - spinbutton "Ціна, грн" [ref=e81]
+                - spinbutton "до" [ref=e82]
+          - button "Скинути фільтр" [ref=e84] [cursor=pointer]
+        - generic [ref=e85]:
+          - generic [ref=e86]: Завантаження…
+          - generic [ref=e87]:
+            - generic [ref=e88]: Сортування
+            - combobox "Сортування" [ref=e89]:
+              - option "За замовчуванням" [selected]
+              - 'option "Ціна: спочатку дешевші"'
+              - 'option "Ціна: спочатку дорожчі"'
+              - option "За назвою (А–Я)"
+        - button "Показати ще" [ref=e98] [cursor=pointer]
+    - generic [ref=e101]:
+      - generic [ref=e102]:
+        - generic [ref=e103]: Послуги
+        - heading "Шиномонтаж без черги" [level=2] [ref=e104]
+      - paragraph [ref=e105]: Власний шиномонтаж автомагазину TIRE PLACE на авторинку «Термінал» у Кривому Розі виконує балансування коліс, ремонт проколу та бокового порізу, перебортування й сезонну заміну шин на легкових авто та кросоверах. Працюємо на сучасному обладнанні, тому зняття й встановлення колеса, як правило, займає лічені хвилини.
+      - paragraph [ref=e106]: Не потрібно записуватись заздалегідь — шиномонтаж легкових авто в нас працює оперативно, а на всі роботи надається гарантія. Актуальні ціни на шиномонтаж дивіться в таблиці нижче.
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]: ⚙️
+          - heading "Сучасне обладнання" [level=3] [ref=e110]
+          - paragraph [ref=e111]: Балансувальні стенди та шиномонтажні верстати для легкових дисків.
+        - generic [ref=e112]:
+          - generic [ref=e113]: 🚗
+          - heading "Легкові авто й кросовери" [level=3] [ref=e114]
+          - paragraph [ref=e115]: Монтаж коліс будь-яких легкових дисків і кросоверних розмірів.
+        - generic [ref=e116]:
+          - generic [ref=e117]: ⏱️
+          - heading "Оперативно, без черги" [level=3] [ref=e118]
+          - paragraph [ref=e119]: Сезонна заміна шин і термінові ремонти без тривалого очікування.
+        - generic [ref=e120]:
+          - generic [ref=e121]: 🛡️
+          - heading "Гарантія на роботи" [level=3] [ref=e122]
+          - paragraph [ref=e123]: Балансування, ремонт проколу й перебортування виконуємо з гарантією якості.
+      - generic [ref=e124]:
+        - generic [ref=e125]:
+          - generic [ref=e126]: Шиномонтаж
+          - generic [ref=e127]:
+            - generic [ref=e128]: Зняття та встановлення колеса (1 колесо)
+            - generic [ref=e129]: 100 грн
+          - generic [ref=e130]:
+            - generic [ref=e131]: Демонтаж та монтаж шини на диск (1 колесо)
+            - generic [ref=e132]: 150 грн
+          - generic [ref=e133]:
+            - generic [ref=e134]: Балансування колеса (1 колесо)
+            - generic [ref=e135]: 100 грн
+          - generic [ref=e136]:
+            - generic [ref=e137]: Комплексний шиномонтаж (4 колеса) (комплект)
+            - generic [ref=e138]: 900 грн
+        - generic [ref=e139]:
+          - generic [ref=e140]: Ремонт
+          - generic [ref=e141]:
+            - generic [ref=e142]: Ремонт проколу (джгут) (1 прокол)
+            - generic [ref=e143]: 100 грн
+          - generic [ref=e144]:
+            - generic [ref=e145]: Ремонт проколу (латка) (1 прокол)
+            - generic [ref=e146]: 150 грн
+          - generic [ref=e147]:
+            - generic [ref=e148]: Ремонт бокового порізу (1 шина)
+            - generic [ref=e149]: 250 грн
+        - generic [ref=e150]:
+          - generic [ref=e151]: Додатково
+          - generic [ref=e152]:
+            - generic [ref=e153]: Перебортування шини (1 колесо)
+            - generic [ref=e154]: 120 грн
+          - generic [ref=e155]:
+            - generic [ref=e156]: Встановлення датчика тиску (без сенсора) (1 колесо)
+            - generic [ref=e157]: 80 грн
+          - generic [ref=e158]:
+            - generic [ref=e159]: Утилізація старої шини (1 шина)
+            - generic [ref=e160]: 40 грн
+        - generic [ref=e161]:
+          - generic [ref=e162]: Сезонна заміна
+          - generic [ref=e163]:
+            - generic [ref=e164]: Сезонна заміна шин (без балансування) (комплект)
+            - generic [ref=e165]: 400 грн
+          - generic [ref=e166]:
+            - generic [ref=e167]: Сезонна заміна шин (з балансуванням) (комплект)
+            - generic [ref=e168]: 700 грн
+        - generic [ref=e169]:
+          - generic [ref=e170]: Мийка
+          - generic [ref=e171]:
+            - generic [ref=e172]: Мийка коліс (комплект)
+            - generic [ref=e173]: 150 грн
+          - generic [ref=e174]:
+            - generic [ref=e175]: Чорніння гуми (чорнитель) (комплект)
+            - generic [ref=e176]: 120 грн
+      - paragraph [ref=e177]: Ціни орієнтовні, актуальні уточнюйте за телефоном.
+      - link "Записатись на шиномонтаж" [ref=e179] [cursor=pointer]:
+        - /url: https://t.me/AnastasiyaBaza?text=%D0%92%D1%96%D1%82%D0%B0%D1%8E%2C%20%D1%85%D0%BE%D1%87%D1%83%20%D0%B7%D0%B0%D0%BF%D0%B8%D1%81%D0%B0%D1%82%D0%B8%D1%81%D1%8C%20%D0%BD%D0%B0%20%D1%88%D0%B8%D0%BD%D0%BE%D0%BC%D0%BE%D0%BD%D1%82%D0%B0%D0%B6
+    - generic [ref=e182]:
+      - generic [ref=e183]:
+        - generic [ref=e184]: В наявності
+        - heading "Автомобільні акумулятори" [level=2] [ref=e185]
+      - paragraph [ref=e186]: В автомагазині TIRE PLACE у Кривому Розі представлені стартерні акумулятори (АКБ) провідних виробників для легкових авто. Підберемо акумулятор за ємністю, полярністю та габаритами під ваше авто — просто напишіть нам марку й модель або дані зі старого АКБ.
+      - generic [ref=e187]:
+        - generic [ref=e188]: Bosch
+        - generic [ref=e189]: Varta
+        - generic [ref=e190]: Exide
+        - generic [ref=e191]: Banner
+        - generic [ref=e192]: Topla
+        - generic [ref=e193]: Mutlu
+        - generic [ref=e194]: Yuasa
+        - generic [ref=e195]: Rombat
+        - generic [ref=e196]: Westa
+        - generic [ref=e197]: ISTA
+        - generic [ref=e198]: A-Mega
+        - generic [ref=e199]: Fiamm
+        - generic [ref=e200]: Centra
+        - generic [ref=e201]: Sznajder
+        - generic [ref=e202]: Delkor
+      - link "Зв'яжіться з нами" [ref=e204] [cursor=pointer]:
+        - /url: https://t.me/AnastasiyaBaza
+    - generic [ref=e207]:
+      - generic [ref=e208]:
+        - generic [ref=e209]: Де ми
+        - heading "Контакти TIRE PLACE" [level=2] [ref=e210]
+      - generic [ref=e211]:
+        - generic [ref=e212]:
+          - generic [ref=e217]:
+            - heading "Телефон" [level=3] [ref=e218]
+            - link "+38 (098) 071-93-93" [ref=e219] [cursor=pointer]:
+              - /url: tel:+380980719393
+          - generic [ref=e225]:
+            - heading "Адреса" [level=3] [ref=e226]
+            - paragraph [ref=e227]: Авторинок «Термінал», вулиця Нікопольське Шосе, Кривий Ріг
+          - generic [ref=e233]:
+            - heading "Графік роботи" [level=3] [ref=e234]
+            - paragraph [ref=e235]: Щодня, 9:00–19:00 (графік уточнюється)
+          - generic [ref=e236]:
+            - heading "Ми в соцмережах" [level=3] [ref=e237]
+            - generic [ref=e238]:
+              - link "Instagram TIRE PLACE" [ref=e239] [cursor=pointer]:
+                - /url: "#"
+              - link "Telegram TIRE PLACE" [ref=e244] [cursor=pointer]:
+                - /url: https://t.me/AnastasiyaBaza
+        - generic [ref=e247]:
+          - generic [ref=e249]:
+            - paragraph [ref=e250]: Карта завантажується лише за вашим запитом, щоб не сповільнювати сторінку.
+            - button "Показати карту" [ref=e251] [cursor=pointer]
+          - link "Прокласти маршрут" [ref=e253] [cursor=pointer]:
+            - /url: https://www.google.com/maps/place/%D0%90%D0%B2%D1%82%D0%BE%D0%BC%D0%B0%D0%B3%D0%B0%D0%B7%D0%B8%D0%BD+%D0%A8%D0%B8%D0%BD+%D1%82%D0%B0+%D0%90%D0%BA%D1%83%D0%BC%D1%83%D0%BB%D1%8F%D1%82%D0%BE%D1%80%D1%96%D0%B2+TIRE+PLACE+%D0%9A%D1%80%D0%B8%D0%B2%D0%B8%D0%B9+%D0%A0%D1%96%D0%B3/@47.8861199,33.3934884,20z/data=!4m15!1m8!3m7!1s0x40db2777b45a2567:0x43eca4088a29b7de!2z0JDQstGC0L7QvNCw0LPQsNC30LjQvSDQqNC40L0g0YLQsCDQkNC60YPQvNGD0LvRj9GC0L7RgNGW0LIgVElSRSBQTEFDRSDQmtGA0LjQstC40Lkg0KDRltCz!8m2!3d47.8860397!4d33.3937558!10e1!16s%2Fg%2F11vzw3hn6v!3m5!1s0x40db2777b45a2567:0x43eca4088a29b7de!8m2!3d47.8860397!4d33.3937558!16s%2Fg%2F11vzw3hn6v?entry=ttu
+    - generic [ref=e255]:
+      - generic [ref=e256]:
+        - generic [ref=e257]: Питання
+        - heading "Часті запитання" [level=2] [ref=e258]
+      - generic [ref=e259]:
+        - group [ref=e260]:
+          - generic "Чи є шини та диски в наявності? +" [ref=e261] [cursor=pointer]
+        - group [ref=e262]:
+          - generic "Як підібрати розмір шин або дисків? +" [ref=e263] [cursor=pointer]
+        - group [ref=e264]:
+          - generic "Скільки триває шиномонтаж? +" [ref=e265] [cursor=pointer]
+        - group [ref=e266]:
+          - generic "Чи можна замовити диски під конкретне авто? +" [ref=e267] [cursor=pointer]
+        - group [ref=e268]:
+          - generic "Де вас знайти? +" [ref=e269] [cursor=pointer]
+        - group [ref=e270]:
+          - generic "Чи потрібен попередній запис на шиномонтаж? +" [ref=e271] [cursor=pointer]
+        - group [ref=e272]:
+          - generic "Які акумулятори у продажу? +" [ref=e273] [cursor=pointer]
+  - contentinfo [ref=e274]:
+    - generic [ref=e275]:
+      - generic [ref=e276]:
+        - generic [ref=e277]:
+          - link "TIRE PLACE — на головну" [ref=e278] [cursor=pointer]:
+            - /url: "#home"
+            - generic [ref=e279]:
+              - generic [ref=e280]: TIRE
+              - generic [ref=e281]: PLACE
+          - paragraph [ref=e282]: Твій шинний простір. Шини, диски, акумулятори та власний шиномонтаж у Кривому Розі.
+        - navigation "Навігація у футері" [ref=e283]:
+          - link "Шини" [ref=e284] [cursor=pointer]:
+            - /url: "#tires"
+          - link "Диски" [ref=e285] [cursor=pointer]:
+            - /url: "#wheels"
+          - link "Шиномонтаж" [ref=e286] [cursor=pointer]:
+            - /url: "#service"
+          - link "Акумулятори" [ref=e287] [cursor=pointer]:
+            - /url: "#batteries"
+          - link "Контакти" [ref=e288] [cursor=pointer]:
+            - /url: "#contacts"
+        - generic [ref=e289]:
+          - paragraph [ref=e290]:
+            - link "+38 (098) 071-93-93" [ref=e291] [cursor=pointer]:
+              - /url: tel:+380980719393
+          - paragraph [ref=e292]: Авторинок «Термінал», вул. Нікопольське Шосе, Кривий Ріг
+          - generic [ref=e293]:
+            - link "Instagram TIRE PLACE" [ref=e294] [cursor=pointer]:
+              - /url: "#"
+            - link "Telegram TIRE PLACE" [ref=e299] [cursor=pointer]:
+              - /url: https://t.me/AnastasiyaBaza
+      - paragraph [ref=e302]: "TIRE PLACE — автомагазин шин, дисків та акумуляторів у Кривому Розі, розташований на авторинку «Термінал» по вулиці Нікопольське шосе. У нас можна купити шини Кривий Ріг: літні, зимові та всесезонні шини для легкових авто, кросоверів і невеликих вантажних авто в розмірах від R13 до R20. Окремо представлені легкосплавні (литі) та штамповані диски Кривий Ріг практично під будь-яке авто — з підбором за діаметром, шириною, розболтовкою (PCD) та вильотом (ET). Власний шиномонтаж на території магазину виконує балансування коліс, ремонт проколів, перебортування та сезонну заміну шин швидко і без тривалого очікування в черзі. Також у продажу автомобільні акумулятори (АКБ) відомих виробників — Bosch, Varta, Exide, Mutlu, Topla та інші — з підбором за ємністю, полярністю і габаритами. Якщо не знаєте точний розмір — підкажемо за номером авто чи розміром, вказаним на боковині старої шини. Магазин зручно розташований для мешканців Кривого Рогу та найближчих районів — заїжджайте на авторинок «Термінал» або пишіть нам у Telegram, щоб уточнити ціну чи записатися на шиномонтаж."
+      - generic [ref=e303]:
+        - paragraph [ref=e304]: © 2026 TIRE PLACE. Всі права захищені.
+        - paragraph [ref=e305]: Твій шинний простір
+  - link "Написати нам у Telegram":
+    - /url: https://t.me/AnastasiyaBaza
+  - status [ref=e306]

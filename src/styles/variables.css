@@ -1,0 +1,70 @@
+:root {
+  /* Палітра з вивіски магазину */
+  --color-bg: #1c1f28;
+  --color-bg-alt: #15171f;
+  --color-bg-raised: #262b38;
+  --color-bg-raised-hover: #2e3444;
+  --color-accent: #f47a1f;
+  --color-accent-light: #ff9847;
+  --color-accent-dark: #d9660f;
+  --color-accent-contrast: #1a1e28; /* темний текст поверх оранжевого */
+  --color-text: #ffffff;
+  --color-text-muted: #a7acba;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+  --color-success: #4caf6d;
+  --color-danger: #d9534f;
+
+  /* Мотоспорт-акцент (Formula 1): фінішні смуги, стартові вогні, ліврея */
+  --color-f1-red: #e10600;
+  --gradient-livery-stripe: repeating-linear-gradient(
+    -45deg,
+    var(--color-bg-alt) 0 10px,
+    var(--color-accent) 10px 20px,
+    var(--color-bg-alt) 20px 30px,
+    var(--color-f1-red) 30px 40px
+  );
+
+  /* Градієнти й скло */
+  --gradient-accent: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-accent) 55%, var(--color-accent-dark) 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  --glass-bg: rgba(28, 31, 40, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  /* Тіні — багатошарова глибина замість плоских панелей */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 1px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 10px 24px -8px rgba(0, 0, 0, 0.45), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 24px 56px -16px rgba(0, 0, 0, 0.6), 0 8px 20px -6px rgba(0, 0, 0, 0.35);
+  --shadow-accent: 0 10px 28px -8px rgba(244, 122, 31, 0.45);
+
+  /* Типографіка */
+  --font-heading: 'Oswald', 'Arial Narrow', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --fs-h1: clamp(2rem, 1.4rem + 3vw, 3.75rem);
+  --fs-h2: clamp(1.5rem, 1.2rem + 1.6vw, 2.5rem);
+  --fs-h3: clamp(1.15rem, 1rem + 0.8vw, 1.5rem);
+  --fs-body: clamp(0.95rem, 0.9rem + 0.2vw, 1.05rem);
+  --fs-small: clamp(0.8rem, 0.78rem + 0.1vw, 0.875rem);
+
+  /* Відступи */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: clamp(2rem, 1.6rem + 2vw, 3.5rem);
+  --space-xl: clamp(3rem, 2.2rem + 4vw, 6rem);
+
+  --container-max: 1280px;
+
+  /* Радіуси — м'якіші, шаруваті картки замість гострих прямокутників */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --header-height: 64px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: 220ms var(--ease);
+
+  --focus-ring: 0 0 0 3px rgba(244, 122, 31, 0.55);
+}

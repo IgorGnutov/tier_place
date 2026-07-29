@@ -1,0 +1,7 @@
+<!-- Плейсхолдер логотипу TIRE PLACE. Фінальний вектор власник надасть окремо — замінити цей файл, зберігши ім'я. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 96" width="240" height="96" role="img" aria-labelledby="tp-logo-title">
+  <title id="tp-logo-title">TIRE PLACE — Твій шинний простір</title>
+  <rect width="240" height="96" rx="4" fill="#F47A1F" />
+  <text x="20" y="42" font-family="Oswald, Arial Narrow, sans-serif" font-weight="700" font-size="30" letter-spacing="1" fill="#1A1E28">TIRE</text>
+  <text x="20" y="78" font-family="Oswald, Arial Narrow, sans-serif" font-weight="700" font-size="30" letter-spacing="1" fill="#1A1E28">PLACE</text>
+</svg>
