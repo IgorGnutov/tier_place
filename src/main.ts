@@ -4,6 +4,7 @@ import { initHeroSlider } from './js/hero-slider';
 import { initCatalogs, initCatalogTabs } from './js/render-products';
 import { initServicePrice } from './js/render-service';
 import { initMap } from './js/map';
+import { initContent } from './js/content';
 
 function initFooterYear(): void {
   const yearEl = document.getElementById('footer-year');
@@ -30,3 +31,4 @@ initServicePrice();
 initMap();
 initFooterYear();
 initFloatingCta();
+initContent();
