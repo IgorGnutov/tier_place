@@ -7,12 +7,10 @@ function sheetCsvUrl(spreadsheetId: string, gid = 0): string {
 
 export const SHEET_TIRES_CSV = sheetCsvUrl('1lughMmzLw0Ve_Ftwy6MUvlBiP9bVEIV8V41ojxKq2u0');
 export const SHEET_WHEELS_CSV = sheetCsvUrl('1lughMmzLw0Ve_Ftwy6MUvlBiP9bVEIV8V41ojxKq2u0', 1073589868);
-export const SHEET_SERVICE_CSV = sheetCsvUrl('1lughMmzLw0Ve_Ftwy6MUvlBiP9bVEIV8V41ojxKq2u0', 1610694498);
 
 // Локальні демо-CSV як фолбек, якщо посилання вище порожнє або таблиця недоступна.
 export const LOCAL_TIRES_CSV = 'data/tires.csv';
 export const LOCAL_WHEELS_CSV = 'data/wheels.csv';
-export const LOCAL_SERVICE_CSV = 'data/service.csv';
 
 // Лист "Контент" — тексти, редаговані через /admin. Порожній рядок — адмінка ще не налаштована,
 // сайт показує тексти, захардкоджені прямо в index.html.
@@ -39,7 +37,7 @@ export const CONTACTS = {
   telegramUrl: 'https://t.me/AnastasiyaBaza',
   // TODO: підставити реальний Instagram власника.
   instagramUrl: '#',
-  address: 'Авторинок «Термінал», вулиця Нікопольське Шосе, Кривий Ріг',
+  address: 'Авторинок «Термінал», вулиця Нікопольське Шосе 1Г, Кривий Ріг',
   lat: 47.8860397,
   lng: 33.3937558,
   mapPlaceUrl: `${MAP_PLACE_URL}?entry=ttu`,

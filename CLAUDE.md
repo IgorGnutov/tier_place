@@ -51,8 +51,8 @@ There is no linter configured either.
   Google Sheet header row — no other catalog logic needs to change.
   Also owns the Tires/Wheels tab switcher (`initCatalogTabs`), which toggles panel visibility and
   syncs `#tires`/`#wheels` hash navigation from the header menu.
-- `src/js/render-service.ts` renders the tire-fitting price list similarly (table on wide screens,
-  cards on narrow).
+- `src/js/render-service.ts` wires up the tire-fitting/battery CTA buttons with prefilled Telegram
+  links — the service section has no price table, just description + "book" button.
 - Buy actions build a `t.me/<user>?text=...` deep link (`buildTelegramLink` in config.ts) with a
   prefilled message; because `?text=` prefill isn't reliable in every Telegram client for private
   chats, every buy button is paired with a "copy request text" fallback button (`telegram.ts`).

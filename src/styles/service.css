@@ -68,6 +68,17 @@
   z-index: 1;
   font-size: 1rem;
   margin-bottom: 0.3em;
+  color: var(--color-text);
+}
+
+/* Заголовки перків підтягуються з /admin (Quill) — там можуть лишитись власні inline-стилі
+   (колір, обгортка в <p>/<span>), тож примусово вирівнюємо вигляд усіх карток під перший перк. */
+.perk-card h3 * {
+  color: inherit !important;
+  font: inherit !important;
+  text-transform: inherit !important;
+  letter-spacing: inherit !important;
+  margin: 0 !important;
 }
 
 .perk-card p {
@@ -78,56 +89,10 @@
   margin: 0;
 }
 
-.price-table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-}
-
-.price-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 560px;
-}
-
-.price-table caption {
-  text-align: left;
-  padding: var(--space-sm);
-  font-family: var(--font-heading);
-  text-transform: uppercase;
-  background: var(--color-bg-raised);
-  color: var(--color-accent);
-  letter-spacing: 0.03em;
-}
-
-.price-table th,
-.price-table td {
-  padding: 0.7em var(--space-sm);
-  text-align: left;
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--fs-small);
-}
-
-.price-table thead th {
-  background: var(--color-bg-alt);
-  color: var(--color-text-muted);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.price-table tbody tr:hover {
-  background: rgba(244, 122, 31, 0.06);
-}
-
-.price-cards {
-  display: none;
-}
-
-.price-disclaimer {
-  margin-top: var(--space-sm);
-  color: var(--color-text-muted);
-  font-size: var(--fs-small);
+.perk-card p * {
+  color: inherit !important;
+  font: inherit !important;
+  margin: 0 !important;
 }
 
 .service-cta {
@@ -145,47 +110,5 @@
 @media (min-width: 1024px) {
   .service-perks {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-/* На дуже вузьких екранах ховаємо таблицю й показуємо картки "послуга + ціна" */
-@media (max-width: 479px) {
-  .price-table-wrap {
-    display: none;
-  }
-
-  .price-cards {
-    display: block;
-  }
-
-  .price-cards__group + .price-cards__group {
-    margin-top: var(--space-md);
-  }
-
-  .price-cards__title {
-    font-family: var(--font-heading);
-    color: var(--color-accent);
-    text-transform: uppercase;
-    font-size: var(--fs-small);
-    letter-spacing: 0.03em;
-    margin-bottom: 0.5em;
-  }
-
-  .price-cards__row {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-sm);
-    padding: 0.6em 0;
-    border-bottom: 1px solid var(--color-border);
-    font-size: var(--fs-small);
-  }
-
-  .price-cards__row-name {
-    color: var(--color-text);
-  }
-
-  .price-cards__row-price {
-    color: var(--color-accent);
-    white-space: nowrap;
   }
 }

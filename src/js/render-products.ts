@@ -27,6 +27,9 @@ interface CardInfo {
   price: number | null;
   inStock: boolean;
   telegramMessage: string;
+  /** undefined — картка без фото-блоку взагалі (шини); string|null — з фото-блоком (диски),
+   *  null означає "фото поки немає" (показуємо плейсхолдер). */
+  imageUrl?: string | null;
 }
 
 interface CatalogConfig {
@@ -60,6 +63,27 @@ function renderSkeleton(grid: HTMLElement): void {
 function renderCard(info: CardInfo): HTMLElement {
   const card = document.createElement('article');
   card.className = 'product-card';
+
+  if (info.imageUrl !== undefined) {
+    const photo = document.createElement('div');
+    photo.className = 'product-card__photo';
+    if (info.imageUrl) {
+      const img = document.createElement('img');
+      img.src = info.imageUrl;
+      img.alt = info.title;
+      img.loading = 'lazy';
+      img.addEventListener('error', () => {
+        // Посилання не веде напряму на файл картинки (сторінка перегляду Google Drive,
+        // видалене фото тощо) — показуємо плейсхолдер замість зламаної іконки браузера.
+        photo.innerHTML = '';
+        photo.classList.add('product-card__photo--placeholder');
+      });
+      photo.appendChild(img);
+    } else {
+      photo.classList.add('product-card__photo--placeholder');
+    }
+    card.appendChild(photo);
+  }
 
   const title = document.createElement('h3');
   title.className = 'product-card__title';
@@ -330,6 +354,7 @@ function wheelsDescribe(row: CsvRow): CardInfo {
     price,
     inStock: parseBool(row.in_stock),
     telegramMessage: `Вітаю, хочу купити товар «${title}»${price !== null ? ` (${size}, ${price} грн)` : ` (${size})`}`,
+    imageUrl: row.image_url?.trim() || null,
   };
 }
 

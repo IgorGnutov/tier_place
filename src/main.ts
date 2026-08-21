@@ -2,7 +2,7 @@ import './styles/main.css';
 import { initNav } from './js/nav';
 import { initHeroSlider } from './js/hero-slider';
 import { initCatalogs, initCatalogTabs } from './js/render-products';
-import { initServicePrice } from './js/render-service';
+import { initServiceCta } from './js/render-service';
 import { initMap } from './js/map';
 import { initContent } from './js/content';
 
@@ -27,7 +27,7 @@ initNav();
 initCatalogTabs();
 initHeroSlider();
 initCatalogs();
-initServicePrice();
+initServiceCta();
 initMap();
 initFooterYear();
 initFloatingCta();

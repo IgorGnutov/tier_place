@@ -69,7 +69,7 @@
     "url": "https://tireplace.com.ua/",
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": "Нікопольське шосе, авторинок «Термінал»",
+      "streetAddress": "Нікопольське шосе 1Г, авторинок «Термінал»",
       "addressLocality": "Кривий Ріг",
       "addressRegion": "Дніпропетровська область",
       "addressCountry": "UA"
@@ -173,7 +173,7 @@
         "name": "Які акумулятори у продажу?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "В наявності стартерні АКБ популярних виробників: Bosch, Varta, Exide, Mutlu та інші — підберемо акумулятор за ємністю, полярністю та габаритами під ваше авто."
+          "text": "В наявності стартерні АКБ популярних виробників: Bosch, Varta, Fiamm, Rombat, Westa, Topla, Vega — підберемо акумулятор за ємністю, полярністю та габаритами під ваше авто."
         }
       }
     ]
@@ -453,7 +453,7 @@
         </p>
         <p class="service-intro" data-content-key="service.intro2">
           Не потрібно записуватись заздалегідь — шиномонтаж легкових авто в нас працює оперативно, а на
-          всі роботи надається гарантія. Актуальні ціни на шиномонтаж дивіться в таблиці нижче.
+          всі роботи надається гарантія. Актуальну ціну уточнюйте за телефоном або в Telegram.
         </p>
 
         <div class="service-perks">
@@ -473,38 +473,19 @@
           </div>
           <div class="perk-card">
             <div class="perk-card__icon" aria-hidden="true">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="10" height="5" rx="1" stroke="currentColor" stroke-width="1.6"/><path d="M8 9v4a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="11" y="14.5" width="4" height="6.5" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>
             </div>
-            <h3 data-content-key="service.perk3.title">Оперативно, без черги</h3>
-            <p data-content-key="service.perk3.desc">Сезонна заміна шин і термінові ремонти без тривалого очікування.</p>
+            <h3 data-content-key="service.perk3.title">Порошкове фарбування дисків</h3>
+            <p data-content-key="service.perk3.desc">Оновлюємо диски порошковою фарбою в потрібний колір — захист від корозії та охайний вигляд.</p>
           </div>
           <div class="perk-card">
             <div class="perk-card__icon" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 3.5 19 6v6c0 4.4-2.9 7.9-7 8.5-4.1-.6-7-4.1-7-8.5V6l7-2.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m9 12 2 2 4-4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3 7.5 12 3.5l9 4-9 4-9-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7.5v9l9 4 9-4v-9" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 11.5v9" stroke="currentColor" stroke-width="1.6"/></svg>
             </div>
-            <h3 data-content-key="service.perk4.title">Гарантія на роботи</h3>
-            <p data-content-key="service.perk4.desc">Балансування, ремонт проколу й перебортування виконуємо з гарантією якості.</p>
+            <h3 data-content-key="service.perk4.title">Сезонне зберігання шин</h3>
+            <p data-content-key="service.perk4.desc">Приймаємо комплекти шин на зберігання між сезонами — не потрібно тримати їх удома чи в гаражі.</p>
           </div>
         </div>
-
-        <div id="service-price-state" aria-live="polite"></div>
-        <div class="price-table-wrap">
-          <table class="price-table" id="service-price-table">
-            <caption>Прайс на шиномонтаж</caption>
-            <thead>
-              <tr>
-                <th scope="col">Послуга</th>
-                <th scope="col">R13–R14</th>
-                <th scope="col">R15–R16</th>
-                <th scope="col">R17–R18</th>
-                <th scope="col">R19+</th>
-              </tr>
-            </thead>
-            <tbody id="service-price-tbody"></tbody>
-          </table>
-        </div>
-        <div class="price-cards" id="service-price-cards"></div>
-        <p class="price-disclaimer" data-content-key="service.disclaimer">Ціни орієнтовні, актуальні уточнюйте за телефоном.</p>
 
         <div class="service-cta">
           <a class="btn" id="service-book-btn" href="#" target="_blank" rel="noopener">Записатись на шиномонтаж</a>
@@ -531,19 +512,11 @@
         <div class="battery-grid">
           <div class="battery-tile">Bosch</div>
           <div class="battery-tile">Varta</div>
-          <div class="battery-tile">Exide</div>
-          <div class="battery-tile">Banner</div>
-          <div class="battery-tile">Topla</div>
-          <div class="battery-tile">Mutlu</div>
-          <div class="battery-tile">Yuasa</div>
+          <div class="battery-tile">Fiamm</div>
           <div class="battery-tile">Rombat</div>
           <div class="battery-tile">Westa</div>
-          <div class="battery-tile">ISTA</div>
-          <div class="battery-tile">A-Mega</div>
-          <div class="battery-tile">Fiamm</div>
-          <div class="battery-tile">Centra</div>
-          <div class="battery-tile">Sznajder</div>
-          <div class="battery-tile">Delkor</div>
+          <div class="battery-tile">Topla</div>
+          <div class="battery-tile">Vega</div>
         </div>
 
         <div class="battery-cta">
@@ -580,7 +553,7 @@
               </span>
               <div>
                 <h3>Адреса</h3>
-                <p>Авторинок «Термінал», вулиця Нікопольське Шосе, Кривий Ріг</p>
+                <p>Авторинок «Термінал», вулиця Нікопольське Шосе 1Г, Кривий Ріг</p>
               </div>
             </div>
 
@@ -659,7 +632,7 @@
           </details>
           <details class="faq-item">
             <summary>Які акумулятори у продажу?</summary>
-            <p data-content-key="faq.7">В наявності стартерні АКБ популярних виробників: Bosch, Varta, Exide, Mutlu та інші — підберемо акумулятор за ємністю, полярністю та габаритами під ваше авто.</p>
+            <p data-content-key="faq.7">В наявності стартерні АКБ популярних виробників: Bosch, Varta, Fiamm, Rombat, Westa, Topla, Vega — підберемо акумулятор за ємністю, полярністю та габаритами під ваше авто.</p>
           </details>
         </div>
       </div>
@@ -689,7 +662,7 @@
 
         <div class="footer-contacts">
           <p><a href="tel:+380980719393">+38 (098) 071-93-93</a></p>
-          <p>Авторинок «Термінал», вул. Нікопольське Шосе, Кривий Ріг</p>
+          <p>Авторинок «Термінал», вул. Нікопольське Шосе 1Г, Кривий Ріг</p>
           <div class="contacts-socials">
             <!-- TODO: підставити реальний Instagram -->
             <a class="social-icon" href="#" aria-label="Instagram TIRE PLACE" target="_blank" rel="noopener">
@@ -710,8 +683,8 @@
         авто — з підбором за діаметром, шириною, розболтовкою (PCD) та вильотом (ET). Власний шиномонтаж на
         території магазину виконує балансування коліс, ремонт проколів, перебортування та сезонну заміну
         шин швидко і без тривалого очікування в черзі. Також у продажу автомобільні акумулятори (АКБ)
-        відомих виробників — Bosch, Varta, Exide, Mutlu, Topla та інші — з підбором за ємністю, полярністю
-        і габаритами. Якщо не знаєте точний розмір — підкажемо за номером авто чи розміром, вказаним на
+        відомих виробників — Bosch, Varta, Fiamm, Rombat, Westa, Topla, Vega — з підбором за ємністю,
+        полярністю і габаритами. Якщо не знаєте точний розмір — підкажемо за номером авто чи розміром, вказаним на
         боковині старої шини. Магазин зручно розташований для мешканців Кривого Рогу та найближчих
         районів — заїжджайте на авторинок «Термінал» або пишіть нам у Telegram, щоб уточнити ціну чи
         записатися на шиномонтаж.
