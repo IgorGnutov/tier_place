@@ -56,6 +56,15 @@ There is no linter configured either.
 - Buy actions build a `t.me/<user>?text=...` deep link (`buildTelegramLink` in config.ts) with a
   prefilled message; because `?text=` prefill isn't reliable in every Telegram client for private
   chats, every buy button is paired with a "copy request text" fallback button (`telegram.ts`).
+- **Cart & checkout:** `src/js/cart.ts` holds cart state (`localStorage`-backed, one cart shared
+  across tires/wheels) with `addItem`/`updateQty`/`removeItem`/`onChange` subscription.
+  `src/js/cart-ui.ts` renders the header cart icon/badge and the slide-out drawer with the
+  checkout form (name, phone, delivery method — pickup or Nova Poshta with city/branch —
+  optional comment). `render-products.ts`'s "Купити" button calls `cart.addItem()` (no longer a
+  direct Telegram link). Checkout POSTs through `src/js/order-api.ts` to the same Apps Script Web
+  App as `/admin` (`CONTENT_API_URL`), which appends a row to a "Замовлення" sheet and relays the
+  order to a Telegram bot chat — see `README.md`, "Кошик і замовлення", for the bot setup steps
+  and the sheet's exact column contract.
 
 **Static asset handling — why `public/` matters here:**
 Vite only auto-copies assets it can statically discover (`<img src>`, `import`). The hero slider
