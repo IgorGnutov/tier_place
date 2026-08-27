@@ -4,13 +4,33 @@
   z-index: 100;
   background: var(--color-bg);
   border-bottom: 1px solid transparent;
-  transition: box-shadow var(--transition), border-color var(--transition), background-color var(--transition), backdrop-filter var(--transition);
+  transition: box-shadow var(--transition), border-color var(--transition);
+}
+
+/*
+  Розмиття — на псевдоелементі, а не на .site-header напряму: backdrop-filter на елементі
+  створює для його position:fixed нащадків новий containing block замість viewport. Бо
+  #main-nav (position:fixed у мобільному відкритому стані) — саме такий нащадок, і з
+  backdrop-filter на хедері мобільне меню обрізалось до висоти хедера після скролу.
+*/
+.site-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  background: var(--glass-bg);
+  transition: opacity var(--transition);
+  pointer-events: none;
 }
 
 .site-header.is-scrolled {
   border-color: var(--color-border);
   box-shadow: var(--shadow-md);
-  background: var(--glass-bg);
+}
+
+.site-header.is-scrolled::before {
+  opacity: 1;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
