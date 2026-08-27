@@ -169,8 +169,8 @@ function createOrder_(payload) {
 }
 
 function sendTelegramOrderNotification_(orderId, timestamp, payload, deliveryMethod, itemsText, total) {
-  var token = PropertiesService.getScriptProperties().getProperty('BOT_TOKEN');
-  var chatId = PropertiesService.getScriptProperties().getProperty('CHAT_ID');
+  var token = PropertiesService.getScriptProperties().getProperty('8757555438:AAFTjoD6PI_lvWzaStZHW90E0zjD2svCvcM');
+  var chatId = PropertiesService.getScriptProperties().getProperty('501977867');
   if (!token || !chatId) return;
 
   var deliveryLine =
