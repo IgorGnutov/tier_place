@@ -315,11 +315,28 @@ function updateBadge(): void {
   badgeEl.hidden = count === 0;
 }
 
+let savedScrollY = 0;
+
+// position: fixed на body — надійніше за overflow: hidden саме, бо на iOS Safari
+// touchmove-жести за фіксованим оверлеєм інакше все одно прокручують сторінку.
+function lockBodyScroll(): void {
+  savedScrollY = window.scrollY;
+  document.body.style.top = `-${savedScrollY}px`;
+  document.body.classList.add('cart-scroll-lock');
+}
+
+function unlockBodyScroll(): void {
+  document.body.classList.remove('cart-scroll-lock');
+  document.body.style.top = '';
+  window.scrollTo(0, savedScrollY);
+}
+
 function openDrawer(): void {
   drawerEl.classList.add('cart-drawer--open');
   overlayEl.classList.add('cart-overlay--open');
   drawerEl.setAttribute('aria-hidden', 'false');
   drawerEl.inert = false;
+  lockBodyScroll();
 }
 
 function closeDrawer(): void {
@@ -328,6 +345,7 @@ function closeDrawer(): void {
   drawerEl.setAttribute('aria-hidden', 'true');
   // inert: закрита панель зсунута за екран, її поля не мають лишатись у tab-порядку.
   drawerEl.inert = true;
+  unlockBodyScroll();
 }
 
 export function initCart(): void {

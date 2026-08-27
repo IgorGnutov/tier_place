@@ -99,10 +99,20 @@
 .cart-drawer__body {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-sm) var(--space-md);
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+}
+
+/* Фіксуємо фон при відкритому кошику, щоб на мобільних не скролилась сторінка за ним. */
+body.cart-scroll-lock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .cart-items {
