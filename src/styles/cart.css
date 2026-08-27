@@ -192,7 +192,7 @@
   color: var(--color-text-muted);
 }
 
-.cart-checkout input,
+.cart-checkout input:not([type='radio']):not([type='checkbox']),
 .cart-checkout textarea {
   width: 100%;
   min-height: 44px;
@@ -237,6 +237,14 @@
   gap: 0.5em;
   font-size: var(--fs-body);
   color: var(--color-text);
+}
+
+.cart-delivery__option input[type='radio'] {
+  width: 1.1em;
+  height: 1.1em;
+  margin: 0;
+  accent-color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .cart-np-fields {
