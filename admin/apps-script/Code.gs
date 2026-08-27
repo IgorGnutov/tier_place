@@ -183,16 +183,34 @@ function createOrder_(payload) {
     sendTelegramOrderNotification_(orderId, timestamp, payload, deliveryMethod, itemsText, total);
   } catch (err) {
     // Замовлення вже записане в таблицю — збій сповіщення в Telegram не повинен ламати відповідь користувачу.
-    Logger.log('Telegram notification failed: ' + err);
+    logTelegramDebug_(orderId, 'Виняток: ' + err);
   }
 
   return { ok: true, orderId: orderId };
 }
 
+/**
+ * ДІАГНОСТИКА: тимчасовий запис у лист "TelegramDebug" — Logger.log/Cloud Logging для цього
+ * проєкту не показує виконання (Executions → doPost → "Для цього завдання немає журналів"),
+ * тому пишемо результат прямо в таблицю, яку точно видно. Прибрати після знаходження причини.
+ */
+function logTelegramDebug_(orderId, message) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('TelegramDebug');
+  if (!sheet) {
+    sheet = ss.insertSheet('TelegramDebug');
+    sheet.appendRow(['timestamp', 'orderId', 'message']);
+  }
+  sheet.appendRow([new Date(), orderId, message]);
+}
+
 function sendTelegramOrderNotification_(orderId, timestamp, payload, deliveryMethod, itemsText, total) {
   var token = PropertiesService.getScriptProperties().getProperty('BOT_TOKEN');
   var chatId = PropertiesService.getScriptProperties().getProperty('CHAT_ID');
-  if (!token || !chatId) return;
+  if (!token || !chatId) {
+    logTelegramDebug_(orderId, 'Пропущено: BOT_TOKEN=' + (token ? 'є' : 'НЕМАЄ') + ', CHAT_ID=' + (chatId ? 'є' : 'НЕМАЄ'));
+    return;
+  }
 
   var deliveryLine =
     deliveryMethod === 'Нова Пошта'
@@ -219,9 +237,7 @@ function sendTelegramOrderNotification_(orderId, timestamp, payload, deliveryMet
     payload: JSON.stringify({ chat_id: chatId, text: lines.join('\n') }),
     muteHttpExceptions: true,
   });
-  // ДІАГНОСТИКА: тимчасовий лог відповіді Telegram API — прибрати після знаходження причини.
-  Logger.log('Telegram response code: ' + response.getResponseCode());
-  Logger.log('Telegram response body: ' + response.getContentText());
+  logTelegramDebug_(orderId, 'HTTP ' + response.getResponseCode() + ': ' + response.getContentText());
 }
 
 /**
