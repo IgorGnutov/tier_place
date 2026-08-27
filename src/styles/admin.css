@@ -271,3 +271,9 @@
   gap: var(--space-xs);
   flex-wrap: wrap;
 }
+
+.admin-orders-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-sm);
+}

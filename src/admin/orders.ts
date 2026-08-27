@@ -1,6 +1,7 @@
 // Вкладка "Замовлення" адмінки: список усіх замовлень (найновіші зверху),
 // кнопки "Опрацьовано" та "Видалити" (видалення приховує замовлення лише в адмінці,
-// рядок у Google Таблиці не чіпається — див. Code.gs hideOrder_).
+// рядок у Google Таблиці не чіпається — див. Code.gs hideOrder_). Кнопка "Архів" перемикає
+// список на приховані замовлення, звідки їх можна повернути кнопкою "Відновити".
 import { callApi, showStatus } from './api';
 
 interface Order {
@@ -16,6 +17,8 @@ interface Order {
   items: string;
   total: string | number;
 }
+
+type Mode = 'active' | 'archive';
 
 // Дані замовлення приходять з публічної (без пароля) дії 'order', тому будь-який відвідувач може
 // підсунути HTML — усе, що потрапляє в innerHTML, обов'язково екрануємо.
@@ -40,7 +43,7 @@ function formatTimestamp(value: string): string {
   });
 }
 
-function renderOrderCard(order: Order, password: string, onChanged: () => void): HTMLElement {
+function renderOrderCard(order: Order, password: string, mode: Mode, onChanged: () => void): HTMLElement {
   const card = document.createElement('article');
   card.className = 'admin-order';
 
@@ -66,6 +69,31 @@ function renderOrderCard(order: Order, password: string, onChanged: () => void):
 
   const actions = document.createElement('div');
   actions.className = 'admin-order__actions';
+
+  if (mode === 'archive') {
+    const restoreBtn = document.createElement('button');
+    restoreBtn.type = 'button';
+    restoreBtn.className = 'btn btn--small btn--outline';
+    restoreBtn.textContent = 'Відновити';
+    restoreBtn.addEventListener('click', async () => {
+      restoreBtn.disabled = true;
+      try {
+        const result = await callApi('restoreOrder', { password, orderId: order.orderId });
+        if (result.ok) {
+          onChanged();
+        } else {
+          showStatus((result.error as string) || 'Не вдалося відновити замовлення', true);
+          restoreBtn.disabled = false;
+        }
+      } catch {
+        showStatus('Не вдалося з’єднатися з сервером адмінки', true);
+        restoreBtn.disabled = false;
+      }
+    });
+    actions.appendChild(restoreBtn);
+    card.appendChild(actions);
+    return card;
+  }
 
   if (!isDone) {
     const processBtn = document.createElement('button');
@@ -124,38 +152,56 @@ function renderOrderCard(order: Order, password: string, onChanged: () => void):
   return card;
 }
 
-export async function initOrdersTab(container: HTMLElement, password: string): Promise<void> {
-  container.innerHTML = '<p class="state-message">Завантаження…</p>';
+async function renderOrders(container: HTMLElement, password: string, mode: Mode): Promise<void> {
+  container.innerHTML = '';
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'admin-orders-toolbar';
+  const toggleBtn = document.createElement('button');
+  toggleBtn.type = 'button';
+  toggleBtn.className = 'btn btn--outline btn--small';
+  toggleBtn.textContent = mode === 'active' ? 'Архів' : '← Замовлення';
+  toggleBtn.addEventListener('click', () => renderOrders(container, password, mode === 'active' ? 'archive' : 'active'));
+  toolbar.appendChild(toggleBtn);
+  container.appendChild(toolbar);
+
+  const listEl = document.createElement('div');
+  listEl.innerHTML = '<p class="state-message">Завантаження…</p>';
+  container.appendChild(listEl);
 
   try {
-    const result = await callApi('listOrders', { password });
+    const result = await callApi(mode === 'active' ? 'listOrders' : 'listArchivedOrders', { password });
 
     if (!result.ok) {
-      container.innerHTML = '';
+      listEl.innerHTML = '';
       const msg = document.createElement('p');
       msg.className = 'state-message state-message--error';
       msg.textContent = (result.error as string) || 'Не вдалося завантажити замовлення';
-      container.appendChild(msg);
+      listEl.appendChild(msg);
       return;
     }
 
     const orders = (result.orders as Order[]) ?? [];
-    container.innerHTML = '';
+    listEl.innerHTML = '';
 
     if (orders.length === 0) {
-      container.innerHTML = '<p class="state-message">Замовлень поки немає</p>';
+      listEl.innerHTML = `<p class="state-message">${mode === 'active' ? 'Замовлень поки немає' : 'Архів порожній'}</p>`;
       return;
     }
 
     const sorted = [...orders].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
     sorted.forEach((order) => {
-      container.appendChild(renderOrderCard(order, password, () => initOrdersTab(container, password)));
+      listEl.appendChild(renderOrderCard(order, password, mode, () => renderOrders(container, password, mode)));
     });
   } catch {
-    container.innerHTML = '';
+    listEl.innerHTML = '';
     const msg = document.createElement('p');
     msg.className = 'state-message state-message--error';
     msg.textContent = 'Не вдалося з’єднатися з сервером адмінки';
-    container.appendChild(msg);
+    listEl.appendChild(msg);
   }
+}
+
+export async function initOrdersTab(container: HTMLElement, password: string): Promise<void> {
+  return renderOrders(container, password, 'active');
 }

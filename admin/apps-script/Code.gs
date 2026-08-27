@@ -80,6 +80,20 @@ function doPost(e) {
     return jsonResponse(hideOrder_(payload.orderId));
   }
 
+  if (action === 'listArchivedOrders') {
+    if (!checkPassword_(payload.password)) {
+      return jsonResponse({ ok: false, error: 'Неправильний пароль' });
+    }
+    return jsonResponse({ ok: true, orders: listArchivedOrders_() });
+  }
+
+  if (action === 'restoreOrder') {
+    if (!checkPassword_(payload.password)) {
+      return jsonResponse({ ok: false, error: 'Неправильний пароль' });
+    }
+    return jsonResponse(restoreOrder_(payload.orderId));
+  }
+
   return jsonResponse({ ok: false, error: 'Невідома дія' });
 }
 
@@ -223,6 +237,10 @@ function getHiddenOrderIds_() {
   }
 }
 
+function setHiddenOrderIds_(ids) {
+  PropertiesService.getScriptProperties().setProperty('HIDDEN_ORDER_IDS', JSON.stringify(ids));
+}
+
 function hideOrder_(orderId) {
   if (!orderId) {
     return { ok: false, error: 'Не вказано ID замовлення' };
@@ -230,20 +248,31 @@ function hideOrder_(orderId) {
   var hidden = getHiddenOrderIds_();
   if (hidden.indexOf(orderId) === -1) {
     hidden.push(orderId);
-    PropertiesService.getScriptProperties().setProperty('HIDDEN_ORDER_IDS', JSON.stringify(hidden));
+    setHiddenOrderIds_(hidden);
   }
   return { ok: true };
 }
 
-function listOrders_() {
+function restoreOrder_(orderId) {
+  if (!orderId) {
+    return { ok: false, error: 'Не вказано ID замовлення' };
+  }
+  var hidden = getHiddenOrderIds_();
+  var index = hidden.indexOf(orderId);
+  if (index !== -1) {
+    hidden.splice(index, 1);
+    setHiddenOrderIds_(hidden);
+  }
+  return { ok: true };
+}
+
+function readAllOrders_() {
   var sheet = getOrCreateOrdersSheet_();
   var data = sheet.getDataRange().getValues();
-  var hidden = getHiddenOrderIds_();
   var orders = [];
   for (var row = 1; row < data.length; row++) {
     var r = data[row];
     if (!r[0]) continue;
-    if (hidden.indexOf(r[0]) !== -1) continue;
     // Sheets може сама перетворити рядок дати на справжній Date — приводимо до одного
     // локального формату, щоб /admin показував час однаково незалежно від типу комірки.
     var rawTimestamp = r[1];
@@ -266,6 +295,20 @@ function listOrders_() {
     });
   }
   return orders;
+}
+
+function listOrders_() {
+  var hidden = getHiddenOrderIds_();
+  return readAllOrders_().filter(function (order) {
+    return hidden.indexOf(order.orderId) === -1;
+  });
+}
+
+function listArchivedOrders_() {
+  var hidden = getHiddenOrderIds_();
+  return readAllOrders_().filter(function (order) {
+    return hidden.indexOf(order.orderId) !== -1;
+  });
 }
 
 function updateOrderStatus_(orderId, status) {
