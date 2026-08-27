@@ -37,6 +37,11 @@
   box-shadow: var(--shadow-accent);
 }
 
+/* display вище перебиває дефолтну поведінку [hidden] — повертаємо приховування порожнього кошика. */
+.cart-toggle__badge[hidden] {
+  display: none;
+}
+
 .cart-overlay {
   position: fixed;
   inset: 0;
@@ -238,6 +243,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+}
+
+/* Без цього правила display: flex вище перебиває [hidden] і поля Нової Пошти видно завжди. */
+.cart-np-fields[hidden] {
+  display: none;
 }
 
 .cart-error {

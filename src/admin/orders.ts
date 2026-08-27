@@ -15,6 +15,14 @@ interface Order {
   total: string | number;
 }
 
+// Дані замовлення приходять з публічної (без пароля) дії 'order', тому будь-який відвідувач може
+// підсунути HTML — усе, що потрапляє в innerHTML, обов'язково екрануємо.
+function escapeHtml(value: unknown): string {
+  const div = document.createElement('div');
+  div.textContent = String(value ?? '');
+  return div.innerHTML;
+}
+
 function renderOrderCard(order: Order, password: string, onProcessed: () => void): HTMLElement {
   const card = document.createElement('article');
   card.className = 'admin-order';
@@ -28,15 +36,15 @@ function renderOrderCard(order: Order, password: string, onProcessed: () => void
 
   card.innerHTML = `
     <div class="admin-order__head">
-      <span class="admin-order__id">${order.orderId}</span>
-      <span class="admin-order__status admin-order__status--${isDone ? 'done' : 'new'}">${order.status}</span>
+      <span class="admin-order__id">${escapeHtml(order.orderId)}</span>
+      <span class="admin-order__status admin-order__status--${isDone ? 'done' : 'new'}">${escapeHtml(order.status)}</span>
     </div>
-    <div class="admin-order__time">${order.timestamp}</div>
-    <div class="admin-order__row"><strong>${order.name}</strong> · ${order.phone}</div>
-    <div class="admin-order__row">${deliveryLine}</div>
-    ${order.comment ? `<div class="admin-order__row admin-order__comment">${order.comment}</div>` : ''}
-    <pre class="admin-order__items">${order.items}</pre>
-    <div class="admin-order__total">Разом: ${order.total} грн</div>
+    <div class="admin-order__time">${escapeHtml(order.timestamp)}</div>
+    <div class="admin-order__row"><strong>${escapeHtml(order.name)}</strong> · ${escapeHtml(order.phone)}</div>
+    <div class="admin-order__row">${escapeHtml(deliveryLine)}</div>
+    ${order.comment ? `<div class="admin-order__row admin-order__comment">${escapeHtml(order.comment)}</div>` : ''}
+    <pre class="admin-order__items">${escapeHtml(order.items)}</pre>
+    <div class="admin-order__total">Разом: ${escapeHtml(order.total)} грн</div>
   `;
 
   if (!isDone) {

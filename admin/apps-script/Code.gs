@@ -17,7 +17,7 @@
  *    Скопіюйте URL, що закінчується на /exec.
  * 4. Впишіть цей URL у CONTENT_API_URL в src/config.ts сайту.
  *
- * Детальніше — README.md, розділи "Адмінка: редагування текстових блоків" і "Замовлення".
+ * Детальніше — README.md, розділи "Адмінка: редагування текстових блоків" і "Кошик і замовлення".
  */
 
 var CONTENT_SHEET_NAME = 'Контент';
@@ -124,6 +124,17 @@ function formatItemsText_(items) {
     .join('\n');
 }
 
+/**
+ * Google Таблиця трактує значення, що починається з =, +, - або @, як формулу. Дані замовлення
+ * приходять з публічної дії 'order', тому перед записом додаємо апостроф — Sheets покаже такий
+ * рядок як текст і нічого не виконає.
+ */
+function sanitizeCell_(value) {
+  var str = String(value == null ? '' : value);
+  if (/^[=+\-@]/.test(str)) return "'" + str;
+  return str;
+}
+
 function createOrder_(payload) {
   var sheet = getOrCreateOrdersSheet_();
   var orderId = 'ORD-' + new Date().getTime();
@@ -132,17 +143,18 @@ function createOrder_(payload) {
   var total = Number(payload.total) || 0;
   var deliveryMethod = payload.deliveryMethod === 'np' ? 'Нова Пошта' : 'Самовивіз';
 
+  // orderId/timestamp/status/total генерує сервер — їх екранувати не треба, решта приходить від клієнта.
   sheet.appendRow([
     orderId,
     timestamp,
     'Нове',
-    payload.name || '',
-    payload.phone || '',
+    sanitizeCell_(payload.name),
+    sanitizeCell_(payload.phone),
     deliveryMethod,
-    payload.npCity || '',
-    payload.npBranch || '',
-    payload.comment || '',
-    itemsText,
+    sanitizeCell_(payload.npCity),
+    sanitizeCell_(payload.npBranch),
+    sanitizeCell_(payload.comment),
+    sanitizeCell_(itemsText),
     total,
   ]);
 
@@ -195,9 +207,16 @@ function listOrders_() {
   for (var row = 1; row < data.length; row++) {
     var r = data[row];
     if (!r[0]) continue;
+    // Sheets може сама перетворити рядок дати на справжній Date — приводимо до одного
+    // локального формату, щоб /admin показував час однаково незалежно від типу комірки.
+    var rawTimestamp = r[1];
+    var timestamp =
+      rawTimestamp instanceof Date
+        ? Utilities.formatDate(rawTimestamp, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
+        : rawTimestamp;
     orders.push({
       orderId: r[0],
-      timestamp: r[1],
+      timestamp: timestamp,
       status: r[2],
       name: r[3],
       phone: r[4],
@@ -213,6 +232,9 @@ function listOrders_() {
 }
 
 function updateOrderStatus_(orderId, status) {
+  if (status !== 'Нове' && status !== 'Опрацьовано') {
+    return { ok: false, error: 'Некоректний статус' };
+  }
   var sheet = getOrCreateOrdersSheet_();
   var data = sheet.getDataRange().getValues();
   for (var row = 1; row < data.length; row++) {

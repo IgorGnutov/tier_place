@@ -53,9 +53,11 @@ There is no linter configured either.
   syncs `#tires`/`#wheels` hash navigation from the header menu.
 - `src/js/render-service.ts` wires up the tire-fitting/battery CTA buttons with prefilled Telegram
   links — the service section has no price table, just description + "book" button.
-- Buy actions build a `t.me/<user>?text=...` deep link (`buildTelegramLink` in config.ts) with a
-  prefilled message; because `?text=` prefill isn't reliable in every Telegram client for private
-  chats, every buy button is paired with a "copy request text" fallback button (`telegram.ts`).
+- The service/battery CTA buttons are the only remaining direct-Telegram actions: `render-service.ts`
+  just sets their `.href` to a `t.me/<user>?text=...` deep link (`buildTelegramLink` in config.ts)
+  with a prefilled message — no copy-to-clipboard fallback button anywhere. Note `?text=` prefill
+  isn't reliable in every Telegram client for private chats, so the message may not appear
+  pre-typed. Product "Купити" buttons no longer use Telegram at all — see the next bullet.
 - **Cart & checkout:** `src/js/cart.ts` holds cart state (`localStorage`-backed, one cart shared
   across tires/wheels) with `addItem`/`updateQty`/`removeItem`/`onChange` subscription.
   `src/js/cart-ui.ts` renders the header cart icon/badge and the slide-out drawer with the

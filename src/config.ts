@@ -18,8 +18,9 @@ export const SHEET_CONTENT_CSV = sheetCsvUrl('1lughMmzLw0Ve_Ftwy6MUvlBiP9bVEIV8V
 export const LOCAL_CONTENT_CSV = 'data/content.csv';
 
 // URL Google Apps Script Web App (деплой прив'язаного до таблиці скрипта з admin/apps-script/Code.gs).
-// Використовується лише сторінкою /admin для перевірки пароля й запису змін — публічний сайт його
-// не викликає. Порожній рядок — адмінка ще не задеплоєна (детальніше — README.md).
+// Використовується сторінкою /admin (перевірка пароля, запис змін, список замовлень) і публічним
+// сайтом при оформленні замовлення (дія 'order', без пароля). Порожній рядок — бекенд ще не
+// задеплоєний (детальніше — README.md).
 export const CONTENT_API_URL =
   'https://script.google.com/macros/s/AKfycbyt46uHTwzKNer-PVBPl00lK4jFqadtElMHVV6N6ALfW_D71-XEbu1VvFpIIpwcGN70gQ/exec';
 

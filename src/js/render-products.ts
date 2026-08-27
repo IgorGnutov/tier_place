@@ -332,7 +332,7 @@ function tiresDescribe(row: CsvRow): CardInfo {
     ],
     price,
     inStock: parseBool(row.in_stock),
-    key: `tires:${JSON.stringify(row)}`,
+    key: `tires:${title}:${size}`,
     sizeLine: size,
   };
 }
@@ -352,7 +352,7 @@ function wheelsDescribe(row: CsvRow): CardInfo {
     ],
     price,
     inStock: parseBool(row.in_stock),
-    key: `wheels:${JSON.stringify(row)}`,
+    key: `wheels:${title}:${size}`,
     sizeLine: size,
     imageUrl: row.image_url?.trim() || null,
   };

@@ -161,6 +161,9 @@ function buildCheckoutForm(): HTMLFormElement {
       showToast('Замовлення оформлено');
       window.setTimeout(() => {
         confirmationMessage = null;
+        // Перемальовуємо одразу: інакше при повторному відкритті кошика без змін у ньому
+        // покупець побачить застаріле "Замовлення прийнято" замість "Кошик порожній".
+        renderBody();
         closeDrawer();
       }, 2500);
     } else {
@@ -172,7 +175,56 @@ function buildCheckoutForm(): HTMLFormElement {
   return form;
 }
 
+interface CheckoutDraft {
+  name: string;
+  phone: string;
+  delivery: string;
+  npCity: string;
+  npBranch: string;
+  comment: string;
+}
+
+/** Знімок уже введених у форму даних — щоб зміна кількості в кошику не стирала набране. */
+function captureCheckoutDraft(): CheckoutDraft | null {
+  const form = bodyEl.querySelector<HTMLFormElement>('.cart-checkout');
+  if (!form) return null;
+
+  const valueOf = (selector: string): string =>
+    form.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)?.value ?? '';
+
+  return {
+    name: valueOf('#cart-name'),
+    phone: valueOf('#cart-phone'),
+    delivery: form.querySelector<HTMLInputElement>('input[name="delivery"]:checked')?.value ?? 'pickup',
+    npCity: valueOf('#cart-np-city'),
+    npBranch: valueOf('#cart-np-branch'),
+    comment: valueOf('#cart-comment'),
+  };
+}
+
+function restoreCheckoutDraft(form: HTMLFormElement, draft: CheckoutDraft): void {
+  const setValue = (selector: string, value: string): void => {
+    const field = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector);
+    if (field) field.value = value;
+  };
+
+  setValue('#cart-name', draft.name);
+  setValue('#cart-phone', draft.phone);
+  setValue('#cart-np-city', draft.npCity);
+  setValue('#cart-np-branch', draft.npBranch);
+  setValue('#cart-comment', draft.comment);
+
+  const radio = form.querySelector<HTMLInputElement>(`input[name="delivery"][value="${draft.delivery}"]`);
+  if (radio) {
+    radio.checked = true;
+    // Не дублюємо логіку показу полів Нової Пошти — вмикаємо той самий обробник 'change'.
+    radio.dispatchEvent(new Event('change'));
+  }
+}
+
 function renderBody(): void {
+  // Помилку відправки навмисно не зберігаємо: вона стосувалась попереднього складу кошика.
+  const draft = captureCheckoutDraft();
   bodyEl.innerHTML = '';
 
   if (confirmationMessage) {
@@ -188,7 +240,9 @@ function renderBody(): void {
   bodyEl.appendChild(itemsWrap);
 
   if (getItems().length > 0) {
-    bodyEl.appendChild(buildCheckoutForm());
+    const form = buildCheckoutForm();
+    bodyEl.appendChild(form);
+    if (draft) restoreCheckoutDraft(form, draft);
   }
 }
 
@@ -203,12 +257,15 @@ function openDrawer(): void {
   drawerEl.classList.add('cart-drawer--open');
   overlayEl.classList.add('cart-overlay--open');
   drawerEl.setAttribute('aria-hidden', 'false');
+  drawerEl.inert = false;
 }
 
 function closeDrawer(): void {
   drawerEl.classList.remove('cart-drawer--open');
   overlayEl.classList.remove('cart-overlay--open');
   drawerEl.setAttribute('aria-hidden', 'true');
+  // inert: закрита панель зсунута за екран, її поля не мають лишатись у tab-порядку.
+  drawerEl.inert = true;
 }
 
 export function initCart(): void {
@@ -217,10 +274,16 @@ export function initCart(): void {
   overlayEl = document.getElementById('cart-overlay')!;
   bodyEl = document.getElementById('cart-body')!;
   badgeEl = document.getElementById('cart-badge');
+  drawerEl.inert = true;
 
   document.getElementById('cart-toggle')?.addEventListener('click', openDrawer);
   document.getElementById('cart-close')?.addEventListener('click', closeDrawer);
   overlayEl.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && drawerEl.classList.contains('cart-drawer--open')) {
+      closeDrawer();
+    }
+  });
 
   onChange(() => {
     updateBadge();
