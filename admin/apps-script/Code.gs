@@ -213,12 +213,15 @@ function sendTelegramOrderNotification_(orderId, timestamp, payload, deliveryMet
   lines.push('Разом: ' + total + ' грн');
 
   var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
-  UrlFetchApp.fetch(url, {
+  var response = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json',
     payload: JSON.stringify({ chat_id: chatId, text: lines.join('\n') }),
     muteHttpExceptions: true,
   });
+  // ДІАГНОСТИКА: тимчасовий лог відповіді Telegram API — прибрати після знаходження причини.
+  Logger.log('Telegram response code: ' + response.getResponseCode());
+  Logger.log('Telegram response body: ' + response.getContentText());
 }
 
 /**
