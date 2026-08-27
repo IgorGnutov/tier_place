@@ -124,7 +124,12 @@ function renderCard(info: CardInfo): HTMLElement {
   buyBtn.type = 'button';
   buyBtn.className = 'btn btn--small';
   buyBtn.textContent = 'Купити';
+  if (!info.inStock) {
+    buyBtn.disabled = true;
+    buyBtn.title = 'Немає в наявності';
+  }
   buyBtn.addEventListener('click', () => {
+    if (!info.inStock) return;
     addItem({ key: info.key, title: info.title, sizeLine: info.sizeLine, price: info.price });
     showToast('Додано в кошик');
   });

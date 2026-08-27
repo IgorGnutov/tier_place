@@ -241,6 +241,14 @@ button {
   transform: translateY(0);
 }
 
+.btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
+}
+
 .btn--outline {
   background: transparent;
   color: var(--color-text);
