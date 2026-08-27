@@ -224,6 +224,12 @@ button {
   transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
 }
 
+/* display: inline-flex вище перебиває дефолтне [hidden] — без цього правила elem.hidden = true
+   не приховує жодну кнопку .btn (наприклад "Редагувати" в /admin). */
+.btn[hidden] {
+  display: none;
+}
+
 .btn:hover,
 .btn:focus-visible {
   filter: brightness(1.08);

@@ -11,7 +11,8 @@ import {
   type FieldDef,
   type FilterState,
 } from './filters';
-import { buildTelegramLink, copyRequestText } from './telegram';
+import { showToast } from './telegram';
+import { addItem } from './cart';
 import {
   SHEET_TIRES_CSV,
   SHEET_WHEELS_CSV,
@@ -26,7 +27,11 @@ interface CardInfo {
   specs: { label: string; value: string }[];
   price: number | null;
   inStock: boolean;
-  telegramMessage: string;
+  /** Стабільний ідентифікатор товару для кошика — повторне "Купити" на той самий товар
+   *  збільшує кількість замість дублювання позиції. */
+  key: string;
+  /** Короткий рядок розміру/характеристик для відображення в кошику. */
+  sizeLine: string;
   /** undefined — картка без фото-блоку взагалі (шини); string|null — з фото-блоком (диски),
    *  null означає "фото поки немає" (показуємо плейсхолдер). */
   imageUrl?: string | null;
@@ -115,22 +120,15 @@ function renderCard(info: CardInfo): HTMLElement {
   const actions = document.createElement('div');
   actions.className = 'product-card__actions';
 
-  const buyLink = document.createElement('a');
-  buyLink.className = 'btn btn--small';
-  buyLink.href = buildTelegramLink(info.telegramMessage);
-  buyLink.target = '_blank';
-  buyLink.rel = 'noopener';
-  buyLink.textContent = 'Купити';
-  actions.appendChild(buyLink);
-
-  const copyBtn = document.createElement('button');
-  copyBtn.type = 'button';
-  copyBtn.className = 'product-card__copy';
-  copyBtn.setAttribute('aria-label', 'Скопіювати текст запиту для Telegram');
-  copyBtn.innerHTML =
-    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" stroke="currentColor" stroke-width="1.6"/></svg>';
-  copyBtn.addEventListener('click', () => copyRequestText(info.telegramMessage));
-  actions.appendChild(copyBtn);
+  const buyBtn = document.createElement('button');
+  buyBtn.type = 'button';
+  buyBtn.className = 'btn btn--small';
+  buyBtn.textContent = 'Купити';
+  buyBtn.addEventListener('click', () => {
+    addItem({ key: info.key, title: info.title, sizeLine: info.sizeLine, price: info.price });
+    showToast('Додано в кошик');
+  });
+  actions.appendChild(buyBtn);
 
   footer.appendChild(actions);
   card.appendChild(footer);
@@ -334,7 +332,8 @@ function tiresDescribe(row: CsvRow): CardInfo {
     ],
     price,
     inStock: parseBool(row.in_stock),
-    telegramMessage: `Вітаю, хочу купити товар «${title}»${price !== null ? ` (${size}, ${price} грн)` : ` (${size})`}`,
+    key: `tires:${title}:${size}`,
+    sizeLine: size,
   };
 }
 
@@ -353,7 +352,8 @@ function wheelsDescribe(row: CsvRow): CardInfo {
     ],
     price,
     inStock: parseBool(row.in_stock),
-    telegramMessage: `Вітаю, хочу купити товар «${title}»${price !== null ? ` (${size}, ${price} грн)` : ` (${size})`}`,
+    key: `wheels:${title}:${size}`,
+    sizeLine: size,
     imageUrl: row.image_url?.trim() || null,
   };
 }

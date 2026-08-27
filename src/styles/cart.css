@@ -1,0 +1,262 @@
+.cart-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color var(--transition), background-color var(--transition);
+}
+
+.cart-toggle:hover,
+.cart-toggle:focus-visible {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-raised);
+}
+
+.cart-toggle__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-accent);
+  color: var(--color-accent-contrast);
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-accent);
+}
+
+/* display вище перебиває дефолтну поведінку [hidden] — повертаємо приховування порожнього кошика. */
+.cart-toggle__badge[hidden] {
+  display: none;
+}
+
+.cart-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+  z-index: 200;
+}
+
+.cart-overlay--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cart-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(100%);
+  transition: transform var(--transition);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-drawer--open {
+  transform: translateX(0);
+}
+
+.cart-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cart-drawer__close {
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  color: var(--color-text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cart-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.cart-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.cart-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.cart-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  min-width: 0;
+}
+
+.cart-item__title {
+  font-weight: 600;
+  font-size: var(--fs-small);
+}
+
+.cart-item__size,
+.cart-item__price {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.cart-item__qty {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.cart-item__qty-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.cart-item__remove {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.2em;
+}
+
+.cart-item__remove:hover,
+.cart-item__remove:focus-visible {
+  color: var(--color-danger);
+}
+
+.cart-total {
+  font-family: var(--font-heading);
+  font-size: var(--fs-h3);
+  text-align: right;
+}
+
+.cart-checkout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-sm);
+}
+
+.cart-checkout label {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.cart-checkout input,
+.cart-checkout textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.6em 0.9em;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--fs-body);
+  font-family: var(--font-body);
+}
+
+.cart-checkout textarea {
+  min-height: auto;
+  resize: vertical;
+}
+
+.cart-checkout input:focus-visible,
+.cart-checkout textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.cart-delivery {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.cart-delivery legend {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  padding: 0;
+}
+
+.cart-delivery__option {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+}
+
+.cart-np-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* Без цього правила display: flex вище перебиває [hidden] і поля Нової Пошти видно завжди. */
+.cart-np-fields[hidden] {
+  display: none;
+}
+
+.cart-error {
+  color: var(--color-danger);
+  font-size: var(--fs-small);
+}
+
+.cart-confirm {
+  text-align: center;
+  padding: var(--space-lg) 0;
+  font-size: var(--fs-body);
+}

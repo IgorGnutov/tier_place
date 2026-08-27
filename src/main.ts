@@ -5,6 +5,7 @@ import { initCatalogs, initCatalogTabs } from './js/render-products';
 import { initServiceCta } from './js/render-service';
 import { initMap } from './js/map';
 import { initContent } from './js/content';
+import { initCart } from './js/cart-ui';
 
 function initFooterYear(): void {
   const yearEl = document.getElementById('footer-year');
@@ -32,3 +33,4 @@ initMap();
 initFooterYear();
 initFloatingCta();
 initContent();
+initCart();
