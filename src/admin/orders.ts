@@ -1,4 +1,6 @@
-// Вкладка "Замовлення" адмінки: список усіх замовлень (найновіші зверху), кнопка "Опрацьовано".
+// Вкладка "Замовлення" адмінки: список усіх замовлень (найновіші зверху),
+// кнопки "Опрацьовано" та "Видалити" (видалення приховує замовлення лише в адмінці,
+// рядок у Google Таблиці не чіпається — див. Code.gs hideOrder_).
 import { callApi, showStatus } from './api';
 
 interface Order {
@@ -23,7 +25,22 @@ function escapeHtml(value: unknown): string {
   return div.innerHTML;
 }
 
-function renderOrderCard(order: Order, password: string, onProcessed: () => void): HTMLElement {
+// order.timestamp приходить як ISO-рядок в UTC (напр. "2026-08-27T16:50:17.000Z") —
+// показуємо його за київським часом у зрозумілому форматі.
+function formatTimestamp(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('uk-UA', {
+    timeZone: 'Europe/Kyiv',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function renderOrderCard(order: Order, password: string, onChanged: () => void): HTMLElement {
   const card = document.createElement('article');
   card.className = 'admin-order';
 
@@ -39,13 +56,16 @@ function renderOrderCard(order: Order, password: string, onProcessed: () => void
       <span class="admin-order__id">${escapeHtml(order.orderId)}</span>
       <span class="admin-order__status admin-order__status--${isDone ? 'done' : 'new'}">${escapeHtml(order.status)}</span>
     </div>
-    <div class="admin-order__time">${escapeHtml(order.timestamp)}</div>
+    <div class="admin-order__time">${escapeHtml(formatTimestamp(order.timestamp))}</div>
     <div class="admin-order__row"><strong>${escapeHtml(order.name)}</strong> · ${escapeHtml(order.phone)}</div>
     <div class="admin-order__row">${escapeHtml(deliveryLine)}</div>
     ${order.comment ? `<div class="admin-order__row admin-order__comment">${escapeHtml(order.comment)}</div>` : ''}
     <pre class="admin-order__items">${escapeHtml(order.items)}</pre>
     <div class="admin-order__total">Разом: ${escapeHtml(order.total)} грн</div>
   `;
+
+  const actions = document.createElement('div');
+  actions.className = 'admin-order__actions';
 
   if (!isDone) {
     const processBtn = document.createElement('button');
@@ -61,7 +81,7 @@ function renderOrderCard(order: Order, password: string, onProcessed: () => void
           status: 'Опрацьовано',
         });
         if (result.ok) {
-          onProcessed();
+          onChanged();
         } else {
           showStatus((result.error as string) || 'Не вдалося оновити статус', true);
           processBtn.disabled = false;
@@ -71,8 +91,35 @@ function renderOrderCard(order: Order, password: string, onProcessed: () => void
         processBtn.disabled = false;
       }
     });
-    card.appendChild(processBtn);
+    actions.appendChild(processBtn);
   }
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.type = 'button';
+  deleteBtn.className = 'btn btn--small btn--outline btn--danger';
+  deleteBtn.textContent = 'Видалити';
+  deleteBtn.addEventListener('click', async () => {
+    if (!window.confirm(`Видалити замовлення ${order.orderId} зі списку?\n(У таблиці Google Sheets рядок залишиться)`)) {
+      return;
+    }
+    deleteBtn.disabled = true;
+    try {
+      // Приховуємо замовлення тільки в адмінці — рядок у Google Таблиці не видаляється.
+      const result = await callApi('hideOrder', { password, orderId: order.orderId });
+      if (result.ok) {
+        onChanged();
+      } else {
+        showStatus((result.error as string) || 'Не вдалося видалити замовлення', true);
+        deleteBtn.disabled = false;
+      }
+    } catch {
+      showStatus('Не вдалося з’єднатися з сервером адмінки', true);
+      deleteBtn.disabled = false;
+    }
+  });
+  actions.appendChild(deleteBtn);
+
+  card.appendChild(actions);
 
   return card;
 }

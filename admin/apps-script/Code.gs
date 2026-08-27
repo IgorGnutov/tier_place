@@ -73,6 +73,13 @@ function doPost(e) {
     return jsonResponse(updateOrderStatus_(payload.orderId, payload.status));
   }
 
+  if (action === 'hideOrder') {
+    if (!checkPassword_(payload.password)) {
+      return jsonResponse({ ok: false, error: 'Неправильний пароль' });
+    }
+    return jsonResponse(hideOrder_(payload.orderId));
+  }
+
   return jsonResponse({ ok: false, error: 'Невідома дія' });
 }
 
@@ -200,13 +207,43 @@ function sendTelegramOrderNotification_(orderId, timestamp, payload, deliveryMet
   });
 }
 
+/**
+ * Список ID замовлень, прихованих в адмінці. Приховування не чіпає рядок у таблиці —
+ * список ID зберігається окремо в Script Properties, тому дані замовлення завжди
+ * лишаються в Google Таблиці.
+ */
+function getHiddenOrderIds_() {
+  var raw = PropertiesService.getScriptProperties().getProperty('HIDDEN_ORDER_IDS');
+  if (!raw) return [];
+  try {
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function hideOrder_(orderId) {
+  if (!orderId) {
+    return { ok: false, error: 'Не вказано ID замовлення' };
+  }
+  var hidden = getHiddenOrderIds_();
+  if (hidden.indexOf(orderId) === -1) {
+    hidden.push(orderId);
+    PropertiesService.getScriptProperties().setProperty('HIDDEN_ORDER_IDS', JSON.stringify(hidden));
+  }
+  return { ok: true };
+}
+
 function listOrders_() {
   var sheet = getOrCreateOrdersSheet_();
   var data = sheet.getDataRange().getValues();
+  var hidden = getHiddenOrderIds_();
   var orders = [];
   for (var row = 1; row < data.length; row++) {
     var r = data[row];
     if (!r[0]) continue;
+    if (hidden.indexOf(r[0]) !== -1) continue;
     // Sheets може сама перетворити рядок дати на справжній Date — приводимо до одного
     // локального формату, щоб /admin показував час однаково незалежно від типу комірки.
     var rawTimestamp = r[1];

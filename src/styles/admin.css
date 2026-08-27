@@ -265,3 +265,9 @@
   font-weight: 700;
   margin-bottom: var(--space-xs);
 }
+
+.admin-order__actions {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
