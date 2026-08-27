@@ -18,6 +18,8 @@ let bodyEl: HTMLElement;
 let badgeEl: HTMLElement | null;
 let confirmationMessage: string | null = null;
 
+const DRAFT_STORAGE_KEY = 'tire_place_cart_draft_v1';
+
 function formatPrice(price: number | null): string {
   return price !== null ? `${price.toLocaleString('uk-UA')} грн` : 'Ціна за запитом';
 }
@@ -77,6 +79,29 @@ function renderItemsList(container: HTMLElement, items: CartItem[]): void {
   container.appendChild(totalEl);
 }
 
+/** Форматує ввід у маску "+38 XXX XXX XX XX", ігноруючи все, крім цифр після коду 38. */
+function formatPhoneMask(raw: string): string {
+  let digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('38')) digits = digits.slice(2);
+  digits = digits.slice(0, 10);
+  if (!digits) return '';
+
+  let result = '+38 ' + digits.slice(0, 3);
+  if (digits.length > 3) result += ' ' + digits.slice(3, 6);
+  if (digits.length > 6) result += ' ' + digits.slice(6, 8);
+  if (digits.length > 8) result += ' ' + digits.slice(8, 10);
+  return result;
+}
+
+function attachPhoneMask(input: HTMLInputElement): void {
+  input.addEventListener('focus', () => {
+    if (!input.value) input.value = '+38 ';
+  });
+  input.addEventListener('input', () => {
+    input.value = formatPhoneMask(input.value);
+  });
+}
+
 function buildCheckoutForm(): HTMLFormElement {
   const form = document.createElement('form');
   form.className = 'cart-checkout';
@@ -85,7 +110,7 @@ function buildCheckoutForm(): HTMLFormElement {
     <input type="text" id="cart-name" name="name" required autocomplete="name" />
 
     <label for="cart-phone">Номер телефону</label>
-    <input type="tel" id="cart-phone" name="phone" required autocomplete="tel" />
+    <input type="tel" id="cart-phone" name="phone" required autocomplete="tel" inputmode="numeric" placeholder="+38 ___ ___ __ __" maxlength="17" />
 
     <fieldset class="cart-delivery">
       <legend>Спосіб доставки</legend>
@@ -113,12 +138,18 @@ function buildCheckoutForm(): HTMLFormElement {
     <button type="submit" class="btn btn--block">Оформити замовлення</button>
   `;
 
+  attachPhoneMask(form.querySelector<HTMLInputElement>('#cart-phone')!);
+
   const npFields = form.querySelector<HTMLElement>('#cart-np-fields')!;
   form.querySelectorAll<HTMLInputElement>('input[name="delivery"]').forEach((radio) => {
     radio.addEventListener('change', () => {
       npFields.hidden = radio.value !== 'np';
     });
   });
+
+  // Зберігаємо введені дані на кожну зміну, щоб вони не губились при перезавантаженні сторінки.
+  form.addEventListener('input', () => persistDraft(readFormDraft(form)));
+  form.addEventListener('change', () => persistDraft(readFormDraft(form)));
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -156,6 +187,7 @@ function buildCheckoutForm(): HTMLFormElement {
 
     if (result.ok) {
       clear();
+      clearDraftStorage();
       confirmationMessage = 'Замовлення прийнято, ми з вами зв’яжемось';
       renderBody();
       showToast('Замовлення оформлено');
@@ -184,11 +216,7 @@ interface CheckoutDraft {
   comment: string;
 }
 
-/** Знімок уже введених у форму даних — щоб зміна кількості в кошику не стирала набране. */
-function captureCheckoutDraft(): CheckoutDraft | null {
-  const form = bodyEl.querySelector<HTMLFormElement>('.cart-checkout');
-  if (!form) return null;
-
+function readFormDraft(form: HTMLFormElement): CheckoutDraft {
   const valueOf = (selector: string): string =>
     form.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)?.value ?? '';
 
@@ -200,6 +228,39 @@ function captureCheckoutDraft(): CheckoutDraft | null {
     npBranch: valueOf('#cart-np-branch'),
     comment: valueOf('#cart-comment'),
   };
+}
+
+/** Знімок уже введених у форму даних — щоб зміна кількості в кошику не стирала набране. */
+function captureCheckoutDraft(): CheckoutDraft | null {
+  const form = bodyEl.querySelector<HTMLFormElement>('.cart-checkout');
+  if (!form) return null;
+  return readFormDraft(form);
+}
+
+function loadDraftFromStorage(): CheckoutDraft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as CheckoutDraft;
+  } catch {
+    return null;
+  }
+}
+
+function persistDraft(draft: CheckoutDraft): void {
+  try {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // localStorage може бути недоступний (приватний режим, квота) — чернетка просто не переживе перезавантаження.
+  }
+}
+
+function clearDraftStorage(): void {
+  try {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // ігноруємо — те саме обмеження, що і в persistDraft
+  }
 }
 
 function restoreCheckoutDraft(form: HTMLFormElement, draft: CheckoutDraft): void {
@@ -224,7 +285,8 @@ function restoreCheckoutDraft(form: HTMLFormElement, draft: CheckoutDraft): void
 
 function renderBody(): void {
   // Помилку відправки навмисно не зберігаємо: вона стосувалась попереднього складу кошика.
-  const draft = captureCheckoutDraft();
+  // Якщо форми ще нема в DOM (перший рендер після перезавантаження сторінки) — беремо чернетку зі сховища.
+  const draft = captureCheckoutDraft() ?? loadDraftFromStorage();
   bodyEl.innerHTML = '';
 
   if (confirmationMessage) {

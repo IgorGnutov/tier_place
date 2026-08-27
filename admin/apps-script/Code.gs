@@ -36,6 +36,16 @@ var ORDER_HEADERS = [
   'total',
 ];
 
+/**
+ * ДІАГНОСТИКА: запустити вручну (вибрати testAuth_ у списку функцій → ▶ Запустити), щоб
+ * спровокувати вікно авторизації для дозволу script.external_request (UrlFetchApp). Прибрати
+ * разом з іншими діагностичними шматками після знаходження причини.
+ */
+function testAuth() {
+  var response = UrlFetchApp.fetch('https://api.telegram.org', { muteHttpExceptions: true });
+  Logger.log('testAuth code: ' + response.getResponseCode());
+}
+
 function doPost(e) {
   var payload = JSON.parse(e.postData.contents);
   var action = payload.action;
@@ -156,9 +166,28 @@ function sanitizeCell_(value) {
   return str;
 }
 
+/**
+ * Порядковий номер замовлення (1, 2, 3, ...) замість випадкового мітки часу — зберігається
+ * в Script Properties, а LockService захищає від перегону, якщо два замовлення прийдуть
+ * одночасно.
+ */
+function getNextOrderNumber_() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var current = parseInt(props.getProperty('NEXT_ORDER_NUM'), 10);
+    if (isNaN(current) || current < 1) current = 1;
+    props.setProperty('NEXT_ORDER_NUM', String(current + 1));
+    return current;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function createOrder_(payload) {
   var sheet = getOrCreateOrdersSheet_();
-  var orderId = 'ORD-' + new Date().getTime();
+  var orderId = 'ORD-' + getNextOrderNumber_();
   var timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
   var itemsText = formatItemsText_(payload.items);
   var total = Number(payload.total) || 0;
@@ -217,27 +246,52 @@ function sendTelegramOrderNotification_(orderId, timestamp, payload, deliveryMet
       ? 'Нова Пошта, ' + (payload.npCity || '') + ', ' + (payload.npBranch || '')
       : 'Самовивіз з магазину';
 
+  var phone = payload.phone || '';
+  var phoneLine = phone ? 'Телефон: <a href="tel:' + escapeHtml_(phoneToTelHref_(phone)) + '">' + escapeHtml_(phone) + '</a>' : 'Телефон: ';
+
   var lines = [
-    '🛒 Нове замовлення ' + orderId,
-    timestamp,
-    "Ім'я: " + (payload.name || ''),
-    'Телефон: ' + (payload.phone || ''),
-    'Доставка: ' + deliveryLine,
+    '🛒 Нове замовлення ' + escapeHtml_(orderId),
+    escapeHtml_(timestamp),
+    "Ім'я: " + escapeHtml_(payload.name || ''),
+    phoneLine,
+    'Доставка: ' + escapeHtml_(deliveryLine),
   ];
-  if (payload.comment) lines.push('Коментар: ' + payload.comment);
+  if (payload.comment) lines.push('Коментар: ' + escapeHtml_(payload.comment));
   lines.push('');
-  lines.push(itemsText);
+  lines.push(escapeHtml_(itemsText));
   lines.push('');
-  lines.push('Разом: ' + total + ' грн');
+  lines.push('Разом: ' + escapeHtml_(String(total)) + ' грн');
 
   var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
   var response = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json',
-    payload: JSON.stringify({ chat_id: chatId, text: lines.join('\n') }),
+    payload: JSON.stringify({ chat_id: chatId, text: lines.join('\n'), parse_mode: 'HTML' }),
     muteHttpExceptions: true,
   });
   logTelegramDebug_(orderId, 'HTTP ' + response.getResponseCode() + ': ' + response.getContentText());
+}
+
+/**
+ * Готує номер телефону для tel:-посилання: лишає лише цифри та початковий +, а український
+ * номер, введений без коду країни (0XXXXXXXXX), доповнює до +380XXXXXXXXX.
+ */
+function phoneToTelHref_(phone) {
+  var digits = String(phone).replace(/[^\d+]/g, '');
+  if (digits.charAt(0) === '+') {
+    return digits;
+  }
+  if (digits.length === 10 && digits.charAt(0) === '0') {
+    return '+38' + digits;
+  }
+  return '+' + digits;
+}
+
+function escapeHtml_(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 /**
