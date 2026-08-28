@@ -2,6 +2,7 @@
 // доступними з урахуванням уже обраних значень інших полів.
 import type { CsvRow } from './csv';
 import { parseBool } from './csv';
+import { t } from './i18n';
 
 export interface FieldDef {
   key: string;
@@ -17,7 +18,7 @@ function fieldValue(row: CsvRow, field: FieldDef): string {
 }
 
 function fieldDisplay(field: FieldDef, value: string): string {
-  if (field.boolean) return value === 'true' ? 'Так' : 'Ні';
+  if (field.boolean) return value === 'true' ? t('product.yes', 'Так') : t('product.no', 'Ні');
   return value;
 }
 

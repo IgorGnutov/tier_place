@@ -13,6 +13,7 @@ import {
 } from './filters';
 import { showToast } from './telegram';
 import { addItem } from './cart';
+import { t, onLangChange } from './i18n';
 import {
   SHEET_TIRES_CSV,
   SHEET_WHEELS_CSV,
@@ -106,7 +107,7 @@ function renderCard(info: CardInfo): HTMLElement {
 
   const status = document.createElement('span');
   status.className = `status ${info.inStock ? 'status--in' : 'status--out'}`;
-  status.textContent = info.inStock ? 'В наявності' : 'Немає в наявності';
+  status.textContent = info.inStock ? t('product.inStock', 'В наявності') : t('product.outOfStock', 'Немає в наявності');
   card.appendChild(status);
 
   const footer = document.createElement('div');
@@ -114,7 +115,7 @@ function renderCard(info: CardInfo): HTMLElement {
 
   const price = document.createElement('span');
   price.className = 'product-card__price';
-  price.textContent = info.price !== null ? `${info.price.toLocaleString('uk-UA')} грн` : 'Ціна за запитом';
+  price.textContent = info.price !== null ? `${info.price.toLocaleString('uk-UA')} грн` : t('product.priceOnRequest', 'Ціна за запитом');
   footer.appendChild(price);
 
   const actions = document.createElement('div');
@@ -123,15 +124,15 @@ function renderCard(info: CardInfo): HTMLElement {
   const buyBtn = document.createElement('button');
   buyBtn.type = 'button';
   buyBtn.className = 'btn btn--small';
-  buyBtn.textContent = 'Купити';
+  buyBtn.textContent = t('product.buy', 'Купити');
   if (!info.inStock) {
     buyBtn.disabled = true;
-    buyBtn.title = 'Немає в наявності';
+    buyBtn.title = t('product.outOfStock', 'Немає в наявності');
   }
   buyBtn.addEventListener('click', () => {
     if (!info.inStock) return;
     addItem({ key: info.key, title: info.title, sizeLine: info.sizeLine, price: info.price });
-    showToast('Додано в кошик');
+    showToast(t('product.addedToCart', 'Додано в кошик'));
   });
   actions.appendChild(buyBtn);
 
@@ -152,7 +153,7 @@ function renderState(container: HTMLElement, message: string, isError: boolean, 
     const retryBtn = document.createElement('button');
     retryBtn.type = 'button';
     retryBtn.className = 'btn btn--outline btn--small';
-    retryBtn.textContent = 'Спробувати ще';
+    retryBtn.textContent = t('product.retry', 'Спробувати ще');
     retryBtn.style.marginTop = '1rem';
     retryBtn.addEventListener('click', onRetry);
     wrap.after(retryBtn);
@@ -177,14 +178,14 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   const resetBtn = form.querySelector<HTMLButtonElement>('[data-reset]');
 
   renderSkeleton(grid);
-  countEl.textContent = 'Завантаження…';
+  countEl.textContent = t('product.loading', 'Завантаження…');
 
   const result = await loadCsv(config.sheetUrl, config.localUrl);
 
   if (result.rows.length === 0) {
     renderState(
       grid,
-      result.error ? `Не вдалося завантажити дані: ${result.error}` : 'Товарів поки немає.',
+      result.error ? `${t('product.loadErrorPrefix', 'Не вдалося завантажити дані: ')}${result.error}` : t('product.noProductsYet', 'Товарів поки немає.'),
       Boolean(result.error),
       () => initCatalog(config)
     );
@@ -239,10 +240,12 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
     fields.forEach((field) => {
       const value = state[field.key];
       if (!value) return;
-      const label = field.key === 'diameter' ? `R${value}` : value === 'true' ? 'Так' : value === 'false' ? 'Ні' : value;
+      const fieldLabel = t(`filters.${field.key}`, field.label);
+      const label =
+        field.key === 'diameter' ? `R${value}` : value === 'true' ? t('product.yes', 'Так') : value === 'false' ? t('product.no', 'Ні') : value;
       const chip = document.createElement('span');
       chip.className = 'chip';
-      chip.innerHTML = `${field.label}: ${label} <button type="button" aria-label="Прибрати фільтр ${field.label}">×</button>`;
+      chip.innerHTML = `${fieldLabel}: ${label} <button type="button" aria-label="${t('product.removeFilterAria', 'Прибрати фільтр')} ${fieldLabel}">×</button>`;
       chip.querySelector('button')?.addEventListener('click', () => {
         delete state[field.key];
         const select = el<HTMLSelectElement>(`${idPrefix}-${field.key}`);
@@ -272,13 +275,13 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
     grid.innerHTML = '';
 
     if (filtered.length === 0) {
-      renderState(grid, 'Нічого не знайдено за обраними фільтрами.', false);
+      renderState(grid, t('product.notFound', 'Нічого не знайдено за обраними фільтрами.'), false);
     } else {
       filtered.slice(0, visibleCount).forEach((row) => grid.appendChild(renderCard(config.describe(row))));
     }
 
-    const warningSuffix = countEl.dataset.warning ? ' (показано демо-дані, таблиця тимчасово недоступна)' : '';
-    countEl.textContent = `Знайдено: ${filtered.length}${warningSuffix}`;
+    const warningSuffix = countEl.dataset.warning ? t('product.foundDemoSuffix', ' (показано демо-дані, таблиця тимчасово недоступна)') : '';
+    countEl.textContent = `${t('product.foundLabel', 'Знайдено')}: ${filtered.length}${warningSuffix}`;
 
     if (loadMoreWrap) loadMoreWrap.hidden = filtered.length <= visibleCount;
   }
@@ -321,6 +324,12 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   buildSelects();
   renderChips();
   renderResults();
+
+  onLangChange(() => {
+    buildSelects();
+    renderChips();
+    renderResults();
+  });
 }
 
 function tiresDescribe(row: CsvRow): CardInfo {
@@ -330,10 +339,10 @@ function tiresDescribe(row: CsvRow): CardInfo {
   return {
     title,
     specs: [
-      { label: 'Сезон', value: row.season ?? '—' },
-      { label: 'Шипи', value: parseBool(row.studded) ? 'Так' : 'Ні' },
-      ...(row.load_index ? [{ label: 'Індекс навантаження', value: row.load_index }] : []),
-      ...(row.speed_index ? [{ label: 'Індекс швидкості', value: row.speed_index }] : []),
+      { label: t('filters.season', 'Сезон'), value: row.season ?? '—' },
+      { label: t('filters.studded', 'Шипи'), value: parseBool(row.studded) ? t('product.yes', 'Так') : t('product.no', 'Ні') },
+      ...(row.load_index ? [{ label: t('product.loadIndex', 'Індекс навантаження'), value: row.load_index }] : []),
+      ...(row.speed_index ? [{ label: t('product.speedIndex', 'Індекс швидкості'), value: row.speed_index }] : []),
     ],
     price,
     inStock: parseBool(row.in_stock),
@@ -349,11 +358,11 @@ function wheelsDescribe(row: CsvRow): CardInfo {
   return {
     title,
     specs: [
-      { label: 'Тип', value: row.type ?? '—' },
+      { label: t('filters.type', 'Тип'), value: row.type ?? '—' },
       { label: 'PCD', value: row.pcd ?? '—' },
       { label: 'ET', value: row.et ?? '—' },
       { label: 'DIA', value: row.dia ?? '—' },
-      ...(row.color ? [{ label: 'Колір', value: row.color }] : []),
+      ...(row.color ? [{ label: t('product.color', 'Колір'), value: row.color }] : []),
     ],
     price,
     inStock: parseBool(row.in_stock),
