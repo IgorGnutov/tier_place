@@ -29,8 +29,9 @@ function escapeHtml(value: unknown): string {
 }
 
 // Порівнюємо тільки цифри, щоб формат номера (+38 067 ..., пробіли, дефіси) не заважав пошуку.
-function normalizePhone(value: string): string {
-  return value.replace(/\D/g, '');
+// Google Таблиця іноді зберігає номер як число, тому приводимо значення до рядка примусово.
+function normalizePhone(value: unknown): string {
+  return String(value ?? '').replace(/\D/g, '');
 }
 
 // order.timestamp приходить як ISO-рядок в UTC (напр. "2026-08-27T16:50:17.000Z") —
