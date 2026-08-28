@@ -199,23 +199,23 @@
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Перейти до основного контенту</a>
+  <a class="skip-link" href="#main" data-i18n="a11y.skipLink">Перейти до основного контенту</a>
 
   <header class="site-header" id="site-header">
     <div class="container site-header__inner">
-      <a class="logo-link" href="#home" data-nav-link aria-label="TIRE PLACE — на головну">
+      <a class="logo-link" href="#home" data-nav-link aria-label="TIRE PLACE — на головну" data-i18n-attr="aria-label:a11y.logoHome">
         <span class="logo-plate">
           <span>TIRE</span>
           <span>PLACE</span>
         </span>
       </a>
 
-      <nav class="main-nav" id="main-nav" aria-label="Основна навігація">
-        <a class="main-nav__link" href="#tires" data-nav-link>Шини</a>
+      <nav class="main-nav" id="main-nav" aria-label="Основна навігація" data-i18n-attr="aria-label:a11y.mainNavAria">
+        <a class="main-nav__link" href="#tires" data-nav-link data-i18n="nav.tires">Шини</a>
         <a class="main-nav__link" href="#wheels" data-nav-link>Диски</a>
         <a class="main-nav__link" href="#service" data-nav-link>Шиномонтаж</a>
-        <a class="main-nav__link" href="#batteries" data-nav-link>Акумулятори</a>
-        <a class="main-nav__link" href="#contacts" data-nav-link>Контакти</a>
+        <a class="main-nav__link" href="#batteries" data-nav-link data-i18n="nav.batteries">Акумулятори</a>
+        <a class="main-nav__link" href="#contacts" data-nav-link data-i18n="nav.contacts">Контакти</a>
       </nav>
 
       <div class="header-actions">
@@ -248,24 +248,24 @@
           підбір за розміром і монтаж на місці.
         </p>
         <ul class="hero__trust">
-          <li>В наявності та на складі</li>
-          <li>Підбір шин та дисків під ваше авто</li>
-          <li>Монтаж на місці</li>
-          <li>Самовивіз та доставка Новою Поштою</li>
+          <li data-i18n="hero.trust1">В наявності та на складі</li>
+          <li data-i18n="hero.trust2">Підбір шин та дисків під ваше авто</li>
+          <li data-i18n="hero.trust3">Монтаж на місці</li>
+          <li data-i18n="hero.trust4">Самовивіз та доставка Новою Поштою</li>
         </ul>
         <div class="hero__lights" aria-hidden="true">
           <span></span><span></span><span></span><span></span><span></span>
         </div>
         <div class="cta-row">
-          <a class="btn" href="#tires" data-nav-link>Купити шини та диски</a>
-          <a class="btn btn--outline" href="#service" data-nav-link>Записатись на шиномонтаж</a>
+          <a class="btn" href="#tires" data-nav-link data-i18n="cta.buyTires">Купити шини та диски</a>
+          <a class="btn btn--outline" href="#service" data-nav-link data-i18n="cta.bookService">Записатись на шиномонтаж</a>
         </div>
       </div>
     </section>
 
     <!-- ФОТО МАГАЗИНУ -->
     <section class="shop-gallery" id="gallery">
-      <div class="hero__slider" id="hero-slider" aria-roledescription="carousel" aria-label="Фото автомагазину TIRE PLACE, Кривий Ріг">
+      <div class="hero__slider" id="hero-slider" aria-roledescription="carousel" aria-label="Фото автомагазину TIRE PLACE, Кривий Ріг" data-i18n-attr="aria-label:a11y.heroSliderAria">
         <div class="hero__slides" id="hero-slides">
           <figure class="hero__slide is-active" data-slide-index="0">
             <picture>
@@ -295,8 +295,8 @@
         </div>
         <div class="hero__overlay" aria-hidden="true"></div>
         <div class="hero__controls">
-          <button class="hero__arrow hero__arrow--prev" id="hero-prev" aria-label="Попереднє фото">‹</button>
-          <button class="hero__arrow hero__arrow--next" id="hero-next" aria-label="Наступне фото">›</button>
+          <button class="hero__arrow hero__arrow--prev" id="hero-prev" aria-label="Попереднє фото" data-i18n-attr="aria-label:a11y.heroPrev">‹</button>
+          <button class="hero__arrow hero__arrow--next" id="hero-next" aria-label="Наступне фото" data-i18n-attr="aria-label:a11y.heroNext">›</button>
         </div>
         <div class="hero__dots" id="hero-dots" role="tablist" aria-label="Вибір слайду"></div>
         <button class="hero__play-pause" id="hero-play-pause" aria-label="Пауза автоперемикання слайдів"></button>
@@ -311,12 +311,12 @@
       <div class="container">
         <div class="section-head">
           <span class="section-head__eyebrow">Каталог</span>
-          <h2><span class="accent">Шини</span> та диски у Кривому Розі</h2>
+          <h2 data-i18n-html="catalog.headingHtml"><span class="accent">Шини</span> та диски у Кривому Розі</h2>
           <p data-content-key="catalog.intro">Підберіть легкові, зимові чи всесезонні шини чи диски за параметрами вашого авто — дані оновлюються автоматично з нашого прайсу.</p>
         </div>
 
-        <div class="tabs" role="tablist" aria-label="Каталог шин і дисків">
-          <button class="tabs__btn is-active" id="tab-tires" role="tab" aria-selected="true" aria-controls="tires" data-tab="tires">Шини</button>
+        <div class="tabs" role="tablist" aria-label="Каталог шин і дисків" data-i18n-attr="aria-label:catalog.tabsAria">
+          <button class="tabs__btn is-active" id="tab-tires" role="tab" aria-selected="true" aria-controls="tires" data-tab="tires" data-i18n="nav.tires">Шини</button>
           <button class="tabs__btn" id="tab-wheels" role="tab" aria-selected="false" aria-controls="wheels" data-tab="wheels">Диски</button>
         </div>
 
@@ -325,58 +325,58 @@
             <div class="filters__grid">
               <div class="filters__field">
                 <label for="tires-width">Ширина</label>
-                <select id="tires-width" name="width"><option value="">Будь-яка</option></select>
+                <select id="tires-width" name="width"><option value="" data-i18n="filters.anyF">Будь-яка</option></select>
               </div>
               <div class="filters__field">
-                <label for="tires-profile">Профіль</label>
-                <select id="tires-profile" name="profile"><option value="">Будь-який</option></select>
+                <label for="tires-profile" data-i18n="filters.profile">Профіль</label>
+                <select id="tires-profile" name="profile"><option value="" data-i18n="filters.anyM">Будь-який</option></select>
               </div>
               <div class="filters__field">
-                <label for="tires-diameter">Діаметр (R)</label>
-                <select id="tires-diameter" name="diameter"><option value="">Будь-який</option></select>
+                <label for="tires-diameter" data-i18n="filters.diameter">Діаметр (R)</label>
+                <select id="tires-diameter" name="diameter"><option value="" data-i18n="filters.anyM">Будь-який</option></select>
               </div>
               <div class="filters__field">
                 <label for="tires-season">Сезон</label>
-                <select id="tires-season" name="season"><option value="">Будь-який</option></select>
+                <select id="tires-season" name="season"><option value="" data-i18n="filters.anyM">Будь-який</option></select>
               </div>
               <div class="filters__field">
-                <label for="tires-studded">Шипи</label>
-                <select id="tires-studded" name="studded"><option value="">Не важливо</option></select>
+                <label for="tires-studded" data-i18n="filters.studded">Шипи</label>
+                <select id="tires-studded" name="studded"><option value="" data-i18n="filters.notImportant">Не важливо</option></select>
               </div>
               <div class="filters__field">
                 <label for="tires-brand">Бренд</label>
-                <select id="tires-brand" name="brand"><option value="">Будь-який</option></select>
+                <select id="tires-brand" name="brand"><option value="" data-i18n="filters.anyM">Будь-який</option></select>
               </div>
               <div class="filters__field">
-                <label for="tires-price-min">Ціна, грн</label>
+                <label for="tires-price-min" data-i18n="filters.priceLabel">Ціна, грн</label>
                 <div class="filters__price">
-                  <input type="number" id="tires-price-min" name="priceMin" placeholder="від" min="0" inputmode="numeric" />
+                  <input type="number" id="tires-price-min" name="priceMin" placeholder="від" min="0" inputmode="numeric" data-i18n-attr="placeholder:filters.priceFrom" />
                   <input type="number" id="tires-price-max" name="priceMax" placeholder="до" min="0" inputmode="numeric" />
                 </div>
               </div>
             </div>
             <div class="filters__actions">
-              <button type="button" class="btn btn--outline btn--small" data-reset>Скинути фільтр</button>
+              <button type="button" class="btn btn--outline btn--small" data-reset data-i18n="filters.reset">Скинути фільтр</button>
             </div>
             <div class="filters__chips" id="tires-chips"></div>
           </form>
 
           <div class="results-bar">
-            <span id="tires-count" aria-live="polite">Завантаження…</span>
+            <span id="tires-count" aria-live="polite" data-i18n="product.loading">Завантаження…</span>
             <div class="results-bar__sort">
-              <label for="tires-sort" class="visually-hidden">Сортування</label>
+              <label for="tires-sort" class="visually-hidden" data-i18n="filters.sortAria">Сортування</label>
               <select id="tires-sort">
-                <option value="default">За замовчуванням</option>
-                <option value="price-asc">Ціна: спочатку дешевші</option>
-                <option value="price-desc">Ціна: спочатку дорожчі</option>
-                <option value="name-asc">За назвою (А–Я)</option>
+                <option value="default" data-i18n="filters.sortDefault">За замовчуванням</option>
+                <option value="price-asc" data-i18n="filters.sortPriceAsc">Ціна: спочатку дешевші</option>
+                <option value="price-desc" data-i18n="filters.sortPriceDesc">Ціна: спочатку дорожчі</option>
+                <option value="name-asc" data-i18n="filters.sortNameAsc">За назвою (А–Я)</option>
               </select>
             </div>
           </div>
 
           <div class="product-grid" id="tires-grid" aria-live="polite"></div>
           <div class="load-more" id="tires-load-more-wrap" hidden>
-            <button class="btn btn--outline" id="tires-load-more">Показати ще</button>
+            <button class="btn btn--outline" id="tires-load-more" data-i18n="product.loadMore">Показати ще</button>
           </div>
         </div>
 
@@ -384,63 +384,63 @@
           <form class="filters" id="wheels-filters" data-product-type="wheels">
             <div class="filters__grid">
               <div class="filters__field">
-                <label for="wheels-diameter">Діаметр (R)</label>
-                <select id="wheels-diameter" name="diameter"><option value="">Будь-який</option></select>
+                <label for="wheels-diameter" data-i18n="filters.diameter">Діаметр (R)</label>
+                <select id="wheels-diameter" name="diameter"><option value="" data-i18n="filters.anyM">Будь-який</option></select>
               </div>
               <div class="filters__field">
                 <label for="wheels-width">Ширина (J)</label>
-                <select id="wheels-width" name="width"><option value="">Будь-яка</option></select>
+                <select id="wheels-width" name="width"><option value="" data-i18n="filters.anyF">Будь-яка</option></select>
               </div>
               <div class="filters__field">
-                <label for="wheels-pcd">Розболтовка (PCD)</label>
-                <select id="wheels-pcd" name="pcd"><option value="">Будь-яка</option></select>
+                <label for="wheels-pcd" data-i18n="filters.pcd">Розболтовка (PCD)</label>
+                <select id="wheels-pcd" name="pcd"><option value="" data-i18n="filters.anyF">Будь-яка</option></select>
               </div>
               <div class="filters__field">
-                <label for="wheels-et">Виліт (ET)</label>
-                <select id="wheels-et" name="et"><option value="">Будь-який</option></select>
+                <label for="wheels-et" data-i18n="filters.et">Виліт (ET)</label>
+                <select id="wheels-et" name="et"><option value="" data-i18n="filters.anyM">Будь-який</option></select>
               </div>
               <div class="filters__field">
                 <label for="wheels-dia">ЦО (DIA)</label>
-                <select id="wheels-dia" name="dia"><option value="">Будь-який</option></select>
+                <select id="wheels-dia" name="dia"><option value="" data-i18n="filters.anyM">Будь-який</option></select>
               </div>
               <div class="filters__field">
                 <label for="wheels-type">Тип</label>
-                <select id="wheels-type" name="type"><option value="">Будь-який</option></select>
+                <select id="wheels-type" name="type"><option value="" data-i18n="filters.anyM">Будь-який</option></select>
               </div>
               <div class="filters__field">
                 <label for="wheels-brand">Бренд</label>
-                <select id="wheels-brand" name="brand"><option value="">Будь-який</option></select>
+                <select id="wheels-brand" name="brand"><option value="" data-i18n="filters.anyM">Будь-який</option></select>
               </div>
               <div class="filters__field">
-                <label for="wheels-price-min">Ціна, грн</label>
+                <label for="wheels-price-min" data-i18n="filters.priceLabel">Ціна, грн</label>
                 <div class="filters__price">
-                  <input type="number" id="wheels-price-min" name="priceMin" placeholder="від" min="0" inputmode="numeric" />
+                  <input type="number" id="wheels-price-min" name="priceMin" placeholder="від" min="0" inputmode="numeric" data-i18n-attr="placeholder:filters.priceFrom" />
                   <input type="number" id="wheels-price-max" name="priceMax" placeholder="до" min="0" inputmode="numeric" />
                 </div>
               </div>
             </div>
             <div class="filters__actions">
-              <button type="button" class="btn btn--outline btn--small" data-reset>Скинути фільтр</button>
+              <button type="button" class="btn btn--outline btn--small" data-reset data-i18n="filters.reset">Скинути фільтр</button>
             </div>
             <div class="filters__chips" id="wheels-chips"></div>
           </form>
 
           <div class="results-bar">
-            <span id="wheels-count" aria-live="polite">Завантаження…</span>
+            <span id="wheels-count" aria-live="polite" data-i18n="product.loading">Завантаження…</span>
             <div class="results-bar__sort">
-              <label for="wheels-sort" class="visually-hidden">Сортування</label>
+              <label for="wheels-sort" class="visually-hidden" data-i18n="filters.sortAria">Сортування</label>
               <select id="wheels-sort">
-                <option value="default">За замовчуванням</option>
-                <option value="price-asc">Ціна: спочатку дешевші</option>
-                <option value="price-desc">Ціна: спочатку дорожчі</option>
-                <option value="name-asc">За назвою (А–Я)</option>
+                <option value="default" data-i18n="filters.sortDefault">За замовчуванням</option>
+                <option value="price-asc" data-i18n="filters.sortPriceAsc">Ціна: спочатку дешевші</option>
+                <option value="price-desc" data-i18n="filters.sortPriceDesc">Ціна: спочатку дорожчі</option>
+                <option value="name-asc" data-i18n="filters.sortNameAsc">За назвою (А–Я)</option>
               </select>
             </div>
           </div>
 
           <div class="product-grid" id="wheels-grid" aria-live="polite"></div>
           <div class="load-more" id="wheels-load-more-wrap" hidden>
-            <button class="btn btn--outline" id="wheels-load-more">Показати ще</button>
+            <button class="btn btn--outline" id="wheels-load-more" data-i18n="product.loadMore">Показати ще</button>
           </div>
         </div>
       </div>
@@ -654,7 +654,7 @@
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
-          <a class="logo-link" href="#home" data-nav-link aria-label="TIRE PLACE — на головну">
+          <a class="logo-link" href="#home" data-nav-link aria-label="TIRE PLACE — на головну" data-i18n-attr="aria-label:a11y.logoHome">
             <span class="logo-plate">
               <span>TIRE</span>
               <span>PLACE</span>
