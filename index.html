@@ -452,8 +452,8 @@
     <section class="section section--alt" id="service">
       <div class="container">
         <div class="section-head">
-          <span class="section-head__eyebrow">Послуги</span>
-          <h2>Шиномонтаж <span class="accent">без черги</span></h2>
+          <span class="section-head__eyebrow" data-i18n="service.eyebrow">Послуги</span>
+          <h2 data-i18n-html="service.headingHtml">Шиномонтаж <span class="accent">без черги</span></h2>
         </div>
 
         <p class="service-intro" data-content-key="service.intro1">
@@ -510,8 +510,8 @@
     <section class="section" id="batteries">
       <div class="container">
         <div class="section-head">
-          <span class="section-head__eyebrow">В наявності</span>
-          <h2>Автомобільні <span class="accent">акумулятори</span></h2>
+          <span class="section-head__eyebrow" data-i18n="battery.eyebrow">В наявності</span>
+          <h2 data-i18n-html="battery.headingHtml">Автомобільні <span class="accent">акумулятори</span></h2>
         </div>
 
         <p class="battery-intro" data-content-key="batteries.intro">
@@ -531,7 +531,7 @@
         </div>
 
         <div class="battery-cta">
-          <a class="btn" id="battery-contact-btn" href="#" target="_blank" rel="noopener">Зв'яжіться з нами</a>
+          <a class="btn" id="battery-contact-btn" href="#" target="_blank" rel="noopener" data-i18n="battery.contactBtn">Зв'яжіться з нами</a>
         </div>
       </div>
     </section>
@@ -542,8 +542,8 @@
     <section class="section section--alt" id="contacts">
       <div class="container">
         <div class="section-head">
-          <span class="section-head__eyebrow">Де ми</span>
-          <h2>Контакти <span class="accent">TIRE PLACE</span></h2>
+          <span class="section-head__eyebrow" data-i18n="contacts.eyebrow">Де ми</span>
+          <h2 data-i18n-html="contacts.headingHtml">Контакти <span class="accent">TIRE PLACE</span></h2>
         </div>
 
         <div class="contacts-grid">
@@ -563,8 +563,8 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 22s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>
               </span>
               <div>
-                <h3>Адреса</h3>
-                <p>Авторинок «Термінал», вулиця Нікопольське Шосе 1Г, Кривий Ріг</p>
+                <h3 data-i18n="contacts.addressLabel">Адреса</h3>
+                <p data-i18n="contacts.addressValue">Авторинок «Термінал», вулиця Нікопольське Шосе 1Г, Кривий Ріг</p>
               </div>
             </div>
 
@@ -573,14 +573,14 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
               </span>
               <div>
-                <h3>Графік роботи</h3>
+                <h3 data-i18n="contacts.hoursLabel">Графік роботи</h3>
                 <!-- TODO: уточнити точний графік роботи у власника -->
                 <p id="hours-note" data-content-key="contacts.hoursNote">Щодня, 9:00–19:00 (графік уточнюється)</p>
               </div>
             </div>
 
             <div>
-              <h3>Ми в соцмережах</h3>
+              <h3 data-i18n="contacts.socialsLabel">Ми в соцмережах</h3>
               <div class="contacts-socials">
                 <!-- TODO: підставити реальний Instagram -->
                 <a class="social-icon" href="#" aria-label="Instagram TIRE PLACE" target="_blank" rel="noopener">
@@ -596,12 +596,12 @@
           <div>
             <div class="map-wrap" id="map-wrap">
               <div class="map-placeholder" id="map-placeholder">
-                <p>Карта завантажується лише за вашим запитом, щоб не сповільнювати сторінку.</p>
-                <button class="btn" id="map-show-btn">Показати карту</button>
+                <p data-i18n="contacts.mapLoadingText">Карта завантажується лише за вашим запитом, щоб не сповільнювати сторінку.</p>
+                <button class="btn" id="map-show-btn" data-i18n="contacts.mapShowBtn">Показати карту</button>
               </div>
             </div>
             <div class="map-actions">
-              <a class="btn btn--outline btn--small" id="map-route-link" href="#" target="_blank" rel="noopener">Прокласти маршрут</a>
+              <a class="btn btn--outline btn--small" id="map-route-link" href="#" target="_blank" rel="noopener" data-i18n="contacts.mapRouteLink">Прокласти маршрут</a>
             </div>
           </div>
         </div>
@@ -612,37 +612,37 @@
     <section class="section" id="faq">
       <div class="container">
         <div class="section-head">
-          <span class="section-head__eyebrow">Питання</span>
-          <h2>Часті запитання</h2>
+          <span class="section-head__eyebrow" data-i18n="faq.eyebrow">Питання</span>
+          <h2 data-i18n="faq.heading">Часті запитання</h2>
         </div>
 
         <div class="faq-list">
           <details class="faq-item">
-            <summary>Чи є шини та диски в наявності?</summary>
+            <summary data-i18n="faq.q1">Чи є шини та диски в наявності?</summary>
             <p data-content-key="faq.1">Так, в автомагазині TIRE PLACE у Кривому Розі широкий вибір літніх, зимових та всесезонних шин, а також литих і штампованих дисків — актуальну наявність дивіться в каталозі вище або уточнюйте за телефоном.</p>
           </details>
           <details class="faq-item">
-            <summary>Як підібрати розмір шин або дисків?</summary>
+            <summary data-i18n="faq.q2">Як підібрати розмір шин або дисків?</summary>
             <p data-content-key="faq.2">Скористайтесь калькулятором у розділі «Шини та диски»: вкажіть ширину, профіль і діаметр (R) для шин або діаметр, PCD і виліт (ET) для дисків — фільтр покаже лише доступні варіанти під ваш автомобіль.</p>
           </details>
           <details class="faq-item">
-            <summary>Скільки триває шиномонтаж?</summary>
+            <summary data-i18n="faq.q3">Скільки триває шиномонтаж?</summary>
             <p data-content-key="faq.3">Заміна коліс на легковому авто чи кросовері в нашому шиномонтажі на авторинку «Термінал» зазвичай займає від 20 до 40 хвилин залежно від розміру шин і диска.</p>
           </details>
           <details class="faq-item">
-            <summary>Чи можна замовити диски під конкретне авто?</summary>
+            <summary data-i18n="faq.q4">Чи можна замовити диски під конкретне авто?</summary>
             <p data-content-key="faq.4">Так, підберемо диски за розболтовкою (PCD), вильотом (ET) і діаметром центрального отвору (DIA) вашого автомобіля — напишіть нам у Telegram параметри або модель авто.</p>
           </details>
           <details class="faq-item">
-            <summary>Де вас знайти?</summary>
+            <summary data-i18n="faq.q5">Де вас знайти?</summary>
             <p data-content-key="faq.5">Автомагазин TIRE PLACE розташований на авторинку «Термінал» по вулиці Нікопольське шосе в Кривому Розі — дивіться карту та маршрут у розділі «Контакти».</p>
           </details>
           <details class="faq-item">
-            <summary>Чи потрібен попередній запис на шиномонтаж?</summary>
+            <summary data-i18n="faq.q6">Чи потрібен попередній запис на шиномонтаж?</summary>
             <p data-content-key="faq.6">Запис не обов'язковий, шиномонтаж легкових авто та кросоверів у нас працює без черги, але для гарантованого часу краще написати нам у Telegram заздалегідь.</p>
           </details>
           <details class="faq-item">
-            <summary>Які акумулятори у продажу?</summary>
+            <summary data-i18n="faq.q7">Які акумулятори у продажу?</summary>
             <p data-content-key="faq.7">В наявності стартерні АКБ популярних виробників: Bosch, Varta, Fiamm, Rombat, Westa, Topla, Vega — підберемо акумулятор за ємністю, полярністю та габаритами під ваше авто.</p>
           </details>
         </div>
@@ -663,12 +663,12 @@
           <p data-content-key="footer.tagline">Твій шинний простір. Шини, диски, акумулятори та власний шиномонтаж у Кривому Розі.</p>
         </div>
 
-        <nav class="footer-nav" aria-label="Навігація у футері">
-          <a href="#tires" data-nav-link>Шини</a>
+        <nav class="footer-nav" aria-label="Навігація у футері" data-i18n-attr="aria-label:a11y.footerNavAria">
+          <a href="#tires" data-nav-link data-i18n="nav.tires">Шини</a>
           <a href="#wheels" data-nav-link>Диски</a>
           <a href="#service" data-nav-link>Шиномонтаж</a>
-          <a href="#batteries" data-nav-link>Акумулятори</a>
-          <a href="#contacts" data-nav-link>Контакти</a>
+          <a href="#batteries" data-nav-link data-i18n="nav.batteries">Акумулятори</a>
+          <a href="#contacts" data-nav-link data-i18n="nav.contacts">Контакти</a>
         </nav>
 
         <div class="footer-contacts">
@@ -702,13 +702,13 @@
       </p>
 
       <div class="footer-bottom">
-        <p>© <span id="footer-year"></span> TIRE PLACE. Всі права захищені.</p>
-        <p>Твій шинний простір</p>
+        <p>© <span id="footer-year"></span> TIRE PLACE. <span data-i18n="footer.rightsReserved">Всі права захищені.</span></p>
+        <p data-i18n="footer.slogan">Твій шинний простір</p>
       </div>
     </div>
   </footer>
 
-  <a class="floating-cta" id="floating-telegram" href="https://t.me/AnastasiyaBaza" target="_blank" rel="noopener" aria-label="Написати нам у Telegram">
+  <a class="floating-cta" id="floating-telegram" href="https://t.me/AnastasiyaBaza" target="_blank" rel="noopener" aria-label="Написати нам у Telegram" data-i18n-attr="aria-label:a11y.telegramFloatingAria">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M21 4 3 11.5l6 2m12-9.5-2.2 15L9 15m12-11L9 15m0 0-.8 5 3-3.2" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
   </a>
 
