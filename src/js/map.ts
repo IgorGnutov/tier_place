@@ -1,5 +1,6 @@
 // Лінива вставка Google Maps iframe — тільки за кліком, щоб не вантажити мапу одразу.
 import { CONTACTS } from '../config';
+import { t } from './i18n';
 
 export function initMap(): void {
   const showBtn = document.getElementById('map-show-btn');
@@ -16,7 +17,7 @@ export function initMap(): void {
     iframe.loading = 'lazy';
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
     iframe.allowFullscreen = true;
-    iframe.title = 'Карта: автомагазин TIRE PLACE, авторинок «Термінал», Кривий Ріг';
+    iframe.title = t('contacts.mapIframeTitle', 'Карта: автомагазин TIRE PLACE, авторинок «Термінал», Кривий Ріг');
     placeholder?.remove();
     wrap.appendChild(iframe);
   });

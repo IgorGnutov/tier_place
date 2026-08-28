@@ -11,6 +11,7 @@ import {
 } from './cart';
 import { submitOrder, type OrderPayload } from './order-api';
 import { showToast } from './telegram';
+import { t, onLangChange } from './i18n';
 
 let drawerEl: HTMLElement;
 let overlayEl: HTMLElement;
@@ -21,16 +22,16 @@ let confirmationMessage: string | null = null;
 const DRAFT_STORAGE_KEY = 'tire_place_cart_draft_v1';
 
 function formatPrice(price: number | null): string {
-  return price !== null ? `${price.toLocaleString('uk-UA')} грн` : 'Ціна за запитом';
+  return price !== null ? `${price.toLocaleString('uk-UA')} грн` : t('product.priceOnRequest', 'Ціна за запитом');
 }
 
 function buildDrawerMarkup(): string {
   return `
     <div class="cart-overlay" id="cart-overlay"></div>
-    <aside class="cart-drawer" id="cart-drawer" aria-hidden="true" role="dialog" aria-label="Кошик">
+    <aside class="cart-drawer" id="cart-drawer" aria-hidden="true" role="dialog" aria-label="${t('cart.dialogAria', 'Кошик')}">
       <div class="cart-drawer__head">
-        <h2>Кошик</h2>
-        <button type="button" class="cart-drawer__close" id="cart-close" aria-label="Закрити кошик">×</button>
+        <h2>${t('cart.heading', 'Кошик')}</h2>
+        <button type="button" class="cart-drawer__close" id="cart-close" aria-label="${t('cart.closeAria', 'Закрити кошик')}">×</button>
       </div>
       <div class="cart-drawer__body" id="cart-body"></div>
     </aside>
@@ -39,7 +40,7 @@ function buildDrawerMarkup(): string {
 
 function renderItemsList(container: HTMLElement, items: CartItem[]): void {
   if (items.length === 0) {
-    container.innerHTML = '<p class="state-message">Кошик порожній</p>';
+    container.innerHTML = `<p class="state-message">${t('cart.empty', 'Кошик порожній')}</p>`;
     return;
   }
 
@@ -56,11 +57,11 @@ function renderItemsList(container: HTMLElement, items: CartItem[]): void {
         <span class="cart-item__price">${formatPrice(item.price)}</span>
       </div>
       <div class="cart-item__qty">
-        <button type="button" class="cart-item__qty-btn" data-dec aria-label="Зменшити кількість">−</button>
+        <button type="button" class="cart-item__qty-btn" data-dec aria-label="${t('cart.decreaseAria', 'Зменшити кількість')}">−</button>
         <span class="cart-item__qty-value">${item.qty}</span>
-        <button type="button" class="cart-item__qty-btn" data-inc aria-label="Збільшити кількість">+</button>
+        <button type="button" class="cart-item__qty-btn" data-inc aria-label="${t('cart.increaseAria', 'Збільшити кількість')}">+</button>
       </div>
-      <button type="button" class="cart-item__remove" data-remove aria-label="Видалити товар">×</button>
+      <button type="button" class="cart-item__remove" data-remove aria-label="${t('cart.removeAria', 'Видалити товар')}">×</button>
     `;
 
     li.querySelector('[data-dec]')?.addEventListener('click', () => updateQty(item.key, item.qty - 1));
@@ -75,7 +76,7 @@ function renderItemsList(container: HTMLElement, items: CartItem[]): void {
 
   const totalEl = document.createElement('div');
   totalEl.className = 'cart-total';
-  totalEl.textContent = `Разом: ${getTotal().toLocaleString('uk-UA')} грн`;
+  totalEl.textContent = `${t('cart.totalLabel', 'Разом')}: ${getTotal().toLocaleString('uk-UA')} грн`;
   container.appendChild(totalEl);
 }
 
@@ -106,36 +107,36 @@ function buildCheckoutForm(): HTMLFormElement {
   const form = document.createElement('form');
   form.className = 'cart-checkout';
   form.innerHTML = `
-    <label for="cart-name">Ім'я</label>
+    <label for="cart-name">${t('cart.nameLabel', "Ім'я")}</label>
     <input type="text" id="cart-name" name="name" required autocomplete="name" />
 
-    <label for="cart-phone">Номер телефону</label>
+    <label for="cart-phone">${t('cart.phoneLabel', 'Номер телефону')}</label>
     <input type="tel" id="cart-phone" name="phone" required autocomplete="tel" inputmode="numeric" placeholder="+38 ___ ___ __ __" maxlength="17" />
 
     <fieldset class="cart-delivery">
-      <legend>Спосіб доставки</legend>
+      <legend>${t('cart.deliveryLegend', 'Спосіб доставки')}</legend>
       <label class="cart-delivery__option">
-        <input type="radio" name="delivery" value="pickup" checked /> Самовивіз з магазину
+        <input type="radio" name="delivery" value="pickup" checked /> ${t('cart.pickup', 'Самовивіз з магазину')}
       </label>
       <label class="cart-delivery__option">
-        <input type="radio" name="delivery" value="np" /> Нова Пошта
+        <input type="radio" name="delivery" value="np" /> ${t('cart.novaPoshta', 'Нова Пошта')}
       </label>
     </fieldset>
 
     <div class="cart-np-fields" id="cart-np-fields" hidden>
-      <label for="cart-np-city">Місто</label>
+      <label for="cart-np-city">${t('cart.cityLabel', 'Місто')}</label>
       <input type="text" id="cart-np-city" name="npCity" autocomplete="address-level2" />
 
-      <label for="cart-np-branch">Відділення або адреса</label>
+      <label for="cart-np-branch">${t('cart.branchLabel', 'Відділення або адреса')}</label>
       <input type="text" id="cart-np-branch" name="npBranch" />
     </div>
 
-    <label for="cart-comment">Коментар (необов'язково)</label>
+    <label for="cart-comment">${t('cart.commentLabel', "Коментар (необов'язково)")}</label>
     <textarea id="cart-comment" name="comment" rows="2"></textarea>
 
     <p class="cart-error" hidden></p>
 
-    <button type="submit" class="btn btn--block">Оформити замовлення</button>
+    <button type="submit" class="btn btn--block">${t('cart.submitBtn', 'Оформити замовлення')}</button>
   `;
 
   attachPhoneMask(form.querySelector<HTMLInputElement>('#cart-phone')!);
@@ -170,12 +171,12 @@ function buildCheckoutForm(): HTMLFormElement {
     };
 
     if (!payload.name || !payload.phone) {
-      errorEl.textContent = "Вкажіть ім'я та номер телефону";
+      errorEl.textContent = t('cart.errorNamePhone', "Вкажіть ім'я та номер телефону");
       errorEl.hidden = false;
       return;
     }
     if (deliveryMethod === 'np' && (!payload.npCity || !payload.npBranch)) {
-      errorEl.textContent = 'Вкажіть місто й відділення або адресу Нової Пошти';
+      errorEl.textContent = t('cart.errorNp', 'Вкажіть місто й відділення або адресу Нової Пошти');
       errorEl.hidden = false;
       return;
     }
@@ -188,9 +189,9 @@ function buildCheckoutForm(): HTMLFormElement {
     if (result.ok) {
       clear();
       clearDraftStorage();
-      confirmationMessage = 'Замовлення прийнято, ми з вами зв’яжемось';
+      confirmationMessage = t('cart.confirmMessage', 'Замовлення прийнято, ми з вами зв’яжемось');
       renderBody();
-      showToast('Замовлення оформлено');
+      showToast(t('cart.orderToast', 'Замовлення оформлено'));
       window.setTimeout(() => {
         confirmationMessage = null;
         // Перемальовуємо одразу: інакше при повторному відкритті кошика без змін у ньому
@@ -199,7 +200,7 @@ function buildCheckoutForm(): HTMLFormElement {
         closeDrawer();
       }, 2500);
     } else {
-      errorEl.textContent = result.error || 'Не вдалося оформити замовлення';
+      errorEl.textContent = result.error || t('cart.orderErrorFallback', 'Не вдалося оформити замовлення');
       errorEl.hidden = false;
     }
   });
@@ -372,4 +373,13 @@ export function initCart(): void {
 
   updateBadge();
   renderBody();
+
+  onLangChange(() => {
+    drawerEl.setAttribute('aria-label', t('cart.dialogAria', 'Кошик'));
+    const heading = drawerEl.querySelector('.cart-drawer__head h2');
+    if (heading) heading.textContent = t('cart.heading', 'Кошик');
+    const closeBtn = document.getElementById('cart-close');
+    if (closeBtn) closeBtn.setAttribute('aria-label', t('cart.closeAria', 'Закрити кошик'));
+    renderBody();
+  });
 }

@@ -1,6 +1,7 @@
 // Vanilla-слайдер для hero: crossfade (тільки opacity, без CLS), автоплей,
 // пауза на hover/focus/document.hidden/prefers-reduced-motion, свайп, клавіатура, ARIA.
 import { gallerySlides, type GallerySlide } from '../data/gallery';
+import { t } from './i18n';
 
 const AUTOPLAY_MS = 5000;
 const SWIPE_THRESHOLD = 40;
@@ -47,7 +48,7 @@ export function initHeroSlider(): void {
   if (existingFirstSlide && total > 0) {
     existingFirstSlide.setAttribute('role', 'group');
     existingFirstSlide.setAttribute('aria-roledescription', 'slide');
-    existingFirstSlide.setAttribute('aria-label', `1 з ${total}`);
+    existingFirstSlide.setAttribute('aria-label', `1 ${t('a11y.of', 'з')} ${total}`);
   }
 
   for (let i = 1; i < total; i++) {
@@ -57,7 +58,7 @@ export function initHeroSlider(): void {
     figure.dataset.slideIndex = String(i);
     figure.setAttribute('role', 'group');
     figure.setAttribute('aria-roledescription', 'slide');
-    figure.setAttribute('aria-label', `${i + 1} з ${total}`);
+    figure.setAttribute('aria-label', `${i + 1} ${t('a11y.of', 'з')} ${total}`);
     figure.innerHTML = buildSources(slide);
     track.appendChild(figure);
   }
@@ -78,7 +79,7 @@ export function initHeroSlider(): void {
     dot.type = 'button';
     dot.className = 'hero__dot';
     dot.setAttribute('role', 'tab');
-    dot.setAttribute('aria-label', `Слайд ${i + 1} з ${total}`);
+    dot.setAttribute('aria-label', `Слайд ${i + 1} ${t('a11y.of', 'з')} ${total}`);
     dot.addEventListener('click', () => goTo(i, true));
     dotsWrap.appendChild(dot);
   });
@@ -92,7 +93,7 @@ export function initHeroSlider(): void {
   function render(): void {
     slideEls.forEach((el, i) => el.classList.toggle('is-active', i === current));
     dotEls.forEach((el, i) => el.classList.toggle('is-active', i === current));
-    if (counter) counter.textContent = `Слайд ${current + 1} з ${total}`;
+    if (counter) counter.textContent = `Слайд ${current + 1} ${t('a11y.of', 'з')} ${total}`;
   }
 
   function goTo(index: number, userInitiated = false): void {
@@ -129,7 +130,10 @@ export function initHeroSlider(): void {
 
   if (playPauseBtn) {
     const setPlayPauseLabel = () => {
-      playPauseBtn.setAttribute('aria-label', isPaused ? 'Відтворити автоперемикання слайдів' : 'Пауза автоперемикання слайдів');
+      playPauseBtn.setAttribute(
+        'aria-label',
+        isPaused ? t('a11y.heroPlayLabel', 'Відтворити автоперемикання слайдів') : t('a11y.heroPauseLabel', 'Пауза автоперемикання слайдів')
+      );
       playPauseBtn.textContent = isPaused ? '▶' : '❚❚';
     };
     setPlayPauseLabel();
