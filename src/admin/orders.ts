@@ -28,6 +28,11 @@ function escapeHtml(value: unknown): string {
   return div.innerHTML;
 }
 
+// Порівнюємо тільки цифри, щоб формат номера (+38 067 ..., пробіли, дефіси) не заважав пошуку.
+function normalizePhone(value: string): string {
+  return value.replace(/\D/g, '');
+}
+
 // order.timestamp приходить як ISO-рядок в UTC (напр. "2026-08-27T16:50:17.000Z") —
 // показуємо його за київським часом у зрозумілому форматі.
 function formatTimestamp(value: string): string {
@@ -152,16 +157,26 @@ function renderOrderCard(order: Order, password: string, mode: Mode, onChanged: 
   return card;
 }
 
-async function renderOrders(container: HTMLElement, password: string, mode: Mode): Promise<void> {
+async function renderOrders(container: HTMLElement, password: string, mode: Mode, filterQuery = ''): Promise<void> {
   container.innerHTML = '';
 
   const toolbar = document.createElement('div');
   toolbar.className = 'admin-orders-toolbar';
+
+  const filterInput = document.createElement('input');
+  filterInput.type = 'tel';
+  filterInput.className = 'admin-orders-toolbar__filter';
+  filterInput.placeholder = 'Пошук за номером телефону';
+  filterInput.value = filterQuery;
+  toolbar.appendChild(filterInput);
+
   const toggleBtn = document.createElement('button');
   toggleBtn.type = 'button';
   toggleBtn.className = 'btn btn--outline btn--small';
   toggleBtn.textContent = mode === 'active' ? 'Архів' : '← Замовлення';
-  toggleBtn.addEventListener('click', () => renderOrders(container, password, mode === 'active' ? 'archive' : 'active'));
+  toggleBtn.addEventListener('click', () =>
+    renderOrders(container, password, mode === 'active' ? 'archive' : 'active', filterInput.value),
+  );
   toolbar.appendChild(toggleBtn);
   container.appendChild(toolbar);
 
@@ -182,7 +197,6 @@ async function renderOrders(container: HTMLElement, password: string, mode: Mode
     }
 
     const orders = (result.orders as Order[]) ?? [];
-    listEl.innerHTML = '';
 
     if (orders.length === 0) {
       listEl.innerHTML = `<p class="state-message">${mode === 'active' ? 'Замовлень поки немає' : 'Архів порожній'}</p>`;
@@ -190,9 +204,24 @@ async function renderOrders(container: HTMLElement, password: string, mode: Mode
     }
 
     const sorted = [...orders].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-    sorted.forEach((order) => {
-      listEl.appendChild(renderOrderCard(order, password, mode, () => renderOrders(container, password, mode)));
-    });
+    const onChanged = () => renderOrders(container, password, mode, filterInput.value);
+
+    const applyFilter = () => {
+      const query = normalizePhone(filterInput.value);
+      const filtered = query ? sorted.filter((order) => normalizePhone(order.phone).includes(query)) : sorted;
+
+      listEl.innerHTML = '';
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<p class="state-message">${query ? 'Нічого не знайдено' : mode === 'active' ? 'Замовлень поки немає' : 'Архів порожній'}</p>`;
+        return;
+      }
+      filtered.forEach((order) => {
+        listEl.appendChild(renderOrderCard(order, password, mode, onChanged));
+      });
+    };
+
+    filterInput.addEventListener('input', applyFilter);
+    applyFilter();
   } catch {
     listEl.innerHTML = '';
     const msg = document.createElement('p');

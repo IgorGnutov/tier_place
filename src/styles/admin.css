@@ -274,6 +274,25 @@
 
 .admin-orders-toolbar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: var(--space-sm);
   margin-bottom: var(--space-sm);
+}
+
+.admin-orders-toolbar__filter {
+  flex: 1;
+  min-width: 0;
+  max-width: 280px;
+  min-height: 38px;
+  padding: 0.4em 0.8em;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--fs-small);
+}
+
+.admin-orders-toolbar__filter:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
