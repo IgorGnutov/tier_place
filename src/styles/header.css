@@ -241,3 +241,35 @@
     display: inline;
   }
 }
+
+.lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.lang-switch__sep {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.lang-switch__link {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: 0.25em 0.15em;
+  transition: color var(--transition);
+}
+
+.lang-switch__link:hover,
+.lang-switch__link:focus-visible {
+  color: var(--color-text);
+}
+
+.lang-switch__link.is-active {
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}

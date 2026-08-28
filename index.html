@@ -3,23 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Шини, диски, акумулятори Кривий Ріг — TIRE PLACE</title>
-  <meta name="description" content="Автомагазин TIRE PLACE у Кривому Розі: шини та диски в наявності, акумулятори, власний шиномонтаж на авторинку «Термінал». Підбір за розміром." />
-  <link rel="canonical" href="https://tireplace.com.ua/" />
+  <title data-i18n="meta.title">Шини, диски, акумулятори Кривий Ріг — TIRE PLACE</title>
+  <meta name="description" content="Автомагазин TIRE PLACE у Кривому Розі: шини та диски в наявності, акумулятори, власний шиномонтаж на авторинку «Термінал». Підбір за розміром." data-i18n-attr="content:meta.description" />
+  <link rel="canonical" id="canonical-link" href="https://tireplace.com.ua/" />
+  <link rel="alternate" hreflang="uk" href="https://tireplace.com.ua/" />
+  <link rel="alternate" hreflang="ru" href="https://tireplace.com.ua/?lang=ru" />
+  <link rel="alternate" hreflang="x-default" href="https://tireplace.com.ua/" />
 
   <!-- Open Graph / Twitter -->
   <meta property="og:type" content="website" />
-  <meta property="og:locale" content="uk_UA" />
+  <meta property="og:locale" content="uk_UA" data-i18n-attr="content:meta.ogLocale" />
   <meta property="og:site_name" content="TIRE PLACE" />
-  <meta property="og:title" content="TIRE PLACE — шини, диски та акумулятори в Кривому Розі" />
-  <meta property="og:description" content="Твій шинний простір. Шини, диски, акумулятори та власний шиномонтаж на авторинку «Термінал» у Кривому Розі." />
+  <meta property="og:title" content="TIRE PLACE — шини, диски та акумулятори в Кривому Розі" data-i18n-attr="content:meta.ogTitle" />
+  <meta property="og:description" content="Твій шинний простір. Шини, диски, акумулятори та власний шиномонтаж на авторинку «Термінал» у Кривому Розі." data-i18n-attr="content:meta.ogDescription" />
   <meta property="og:image" content="https://tireplace.com.ua/assets/photos/optimized/tire-place-kryvyi-rih-vyviska-1-1200.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="900" />
   <meta property="og:url" content="https://tireplace.com.ua/" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="TIRE PLACE — шини, диски та акумулятори в Кривому Розі" />
-  <meta name="twitter:description" content="Твій шинний простір. Шини, диски, акумулятори та власний шиномонтаж на авторинку «Термінал»." />
+  <meta name="twitter:title" content="TIRE PLACE — шини, диски та акумулятори в Кривому Розі" data-i18n-attr="content:meta.ogTitle" />
+  <meta name="twitter:description" content="Твій шинний простір. Шини, диски, акумулятори та власний шиномонтаж на авторинку «Термінал»." data-i18n-attr="content:meta.twitterDescription" />
   <meta name="twitter:image" content="https://tireplace.com.ua/assets/photos/optimized/tire-place-kryvyi-rih-vyviska-1-1200.jpg" />
 
   <!-- Favicons / PWA -->
@@ -216,7 +219,10 @@
       </nav>
 
       <div class="header-actions">
-        <a class="header-phone" href="tel:+380980719393" aria-label="Подзвонити: +38 (098) 071-93-93">
+        <div class="lang-switch" data-i18n-attr="aria-label:a11y.langSwitchAria" aria-label="Мова сайту">
+          <a href="?" class="lang-switch__link" data-lang-link="uk">UA</a><span class="lang-switch__sep" aria-hidden="true">/</span><a href="?lang=ru" class="lang-switch__link" data-lang-link="ru">RU</a>
+        </div>
+        <a class="header-phone" href="tel:+380980719393" aria-label="Подзвонити: +38 (098) 071-93-93" data-i18n-attr="aria-label:a11y.phoneCall">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.2 1L6.6 10.8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
           <span class="header-phone__text">+38 (098) 071-93-93</span>
         </a>

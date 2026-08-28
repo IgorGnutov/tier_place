@@ -1,4 +1,5 @@
 import './styles/main.css';
+import { initI18n } from './js/i18n';
 import { initNav } from './js/nav';
 import { initHeroSlider } from './js/hero-slider';
 import { initCatalogs, initCatalogTabs } from './js/render-products';
@@ -24,6 +25,7 @@ function initFloatingCta(): void {
   observer.observe(hero);
 }
 
+initI18n();
 initNav();
 initCatalogTabs();
 initHeroSlider();
