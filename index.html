@@ -19,7 +19,7 @@
   <meta property="og:image" content="https://tireplace.com.ua/assets/photos/optimized/tire-place-kryvyi-rih-vyviska-1-1200.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="900" />
-  <meta property="og:url" content="https://tireplace.com.ua/" />
+  <meta property="og:url" id="og-url-meta" content="https://tireplace.com.ua/" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="TIRE PLACE — шини, диски та акумулятори в Кривому Розі" data-i18n-attr="content:meta.ogTitle" />
   <meta name="twitter:description" content="Твій шинний простір. Шини, диски, акумулятори та власний шиномонтаж на авторинку «Термінал»." data-i18n-attr="content:meta.twitterDescription" />
@@ -219,14 +219,14 @@
       </nav>
 
       <div class="header-actions">
-        <div class="lang-switch" data-i18n-attr="aria-label:a11y.langSwitchAria" aria-label="Мова сайту">
-          <a href="?" class="lang-switch__link" data-lang-link="uk">UA</a><span class="lang-switch__sep" aria-hidden="true">/</span><a href="?lang=ru" class="lang-switch__link" data-lang-link="ru">RU</a>
+        <div class="lang-switch" role="group" data-i18n-attr="aria-label:a11y.langSwitchAria" aria-label="Мова сайту">
+          <a href="?" class="lang-switch__link" data-lang-link="uk" hreflang="uk" lang="uk">UA</a><span class="lang-switch__sep" aria-hidden="true">/</span><a href="?lang=ru" class="lang-switch__link" data-lang-link="ru" hreflang="ru" lang="ru">RU</a>
         </div>
         <a class="header-phone" href="tel:+380980719393" aria-label="Подзвонити: +38 (098) 071-93-93" data-i18n-attr="aria-label:a11y.phoneCall">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.4 0 .8-.2 1L6.6 10.8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
           <span class="header-phone__text">+38 (098) 071-93-93</span>
         </a>
-        <button class="cart-toggle" id="cart-toggle" type="button" aria-label="Кошик">
+        <button class="cart-toggle" id="cart-toggle" type="button" aria-label="Кошик" data-i18n-attr="aria-label:cart.heading">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4h2l2.4 12.2a2 2 0 0 0 2 1.8h8.6a2 2 0 0 0 2-1.6L21.5 8H6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="9.5" cy="20" r="1.4" fill="currentColor"/><circle cx="17.5" cy="20" r="1.4" fill="currentColor"/></svg>
           <span class="cart-toggle__badge" id="cart-badge" hidden>0</span>
         </button>
@@ -286,6 +286,7 @@
                 width="1200"
                 height="900"
                 alt="Вивіска автомагазину TIRE PLACE на авторинку «Термінал» у Кривому Розі — шини, диски, акумулятори"
+                data-i18n-attr="alt:hero.lcpImageAlt"
                 loading="eager"
                 fetchpriority="high"
                 decoding="sync"
@@ -298,12 +299,12 @@
           <button class="hero__arrow hero__arrow--prev" id="hero-prev" aria-label="Попереднє фото" data-i18n-attr="aria-label:a11y.heroPrev">‹</button>
           <button class="hero__arrow hero__arrow--next" id="hero-next" aria-label="Наступне фото" data-i18n-attr="aria-label:a11y.heroNext">›</button>
         </div>
-        <div class="hero__dots" id="hero-dots" role="tablist" aria-label="Вибір слайду"></div>
+        <div class="hero__dots" id="hero-dots" role="tablist" aria-label="Вибір слайду" data-i18n-attr="aria-label:a11y.heroDotsAria"></div>
         <button class="hero__play-pause" id="hero-play-pause" aria-label="Пауза автоперемикання слайдів"></button>
         <p class="visually-hidden" id="hero-counter" aria-live="polite"></p>
       </div>
 
-      <p class="hero__credit">Фото нашого магазину на авторинку «Термінал»</p>
+      <p class="hero__credit" data-i18n="hero.credit">Фото нашого магазину на авторинку «Термінал»</p>
     </section>
 
     <!-- ШИНИ ТА ДИСКИ -->
@@ -499,7 +500,7 @@
         </div>
 
         <div class="service-cta">
-          <a class="btn" id="service-book-btn" href="#" target="_blank" rel="noopener">Записатись на шиномонтаж</a>
+          <a class="btn" id="service-book-btn" href="#" target="_blank" rel="noopener" data-i18n="cta.bookService">Записатись на шиномонтаж</a>
         </div>
       </div>
     </section>
@@ -673,7 +674,7 @@
 
         <div class="footer-contacts">
           <p><a href="tel:+380980719393">+38 (098) 071-93-93</a></p>
-          <p>Авторинок «Термінал», вул. Нікопольське Шосе 1Г, Кривий Ріг</p>
+          <p data-i18n="contacts.addressValue">Авторинок «Термінал», вул. Нікопольське Шосе 1Г, Кривий Ріг</p>
           <div class="contacts-socials">
             <!-- TODO: підставити реальний Instagram -->
             <a class="social-icon" href="#" aria-label="Instagram TIRE PLACE" target="_blank" rel="noopener">

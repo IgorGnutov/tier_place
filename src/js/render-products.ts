@@ -183,13 +183,16 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   const result = await loadCsv(config.sheetUrl, config.localUrl);
 
   if (result.rows.length === 0) {
-    renderState(
-      grid,
-      result.error ? `${t('product.loadErrorPrefix', 'Не вдалося завантажити дані: ')}${result.error}` : t('product.noProductsYet', 'Товарів поки немає.'),
-      Boolean(result.error),
-      () => initCatalog(config)
-    );
+    const showEmptyState = () =>
+      renderState(
+        grid,
+        result.error ? `${t('product.loadErrorPrefix', 'Не вдалося завантажити дані: ')}${result.error}` : t('product.noProductsYet', 'Товарів поки немає.'),
+        Boolean(result.error),
+        () => initCatalog(config)
+      );
+    showEmptyState();
     countEl.textContent = '';
+    onLangChange(showEmptyState);
     return;
   }
 

@@ -25,6 +25,9 @@ export const RU_STRINGS: Record<string, string> = {
   'hero.trust4': 'Самовывоз и доставка Новой Почтой',
   'cta.buyTires': 'Купить шины и диски',
   'cta.bookService': 'Записаться на шиномонтаж',
+  'hero.credit': 'Фото нашего магазина на авторынке «Терминал»',
+  'hero.lcpImageAlt':
+    'Вывеска автомагазина TIRE PLACE на авторынке «Терминал» в Кривом Роге — шины, диски, аккумуляторы',
 
   // --- catalog / filters ---
   'catalog.headingHtml': '<span class="accent">Шины</span> и диски в Кривом Роге',
@@ -143,4 +146,5 @@ export const RU_STRINGS: Record<string, string> = {
   'a11y.mainNavAria': 'Основная навигация',
   'a11y.telegramFloatingAria': 'Написать нам в Telegram',
   'a11y.langSwitchAria': 'Язык сайта',
+  'a11y.heroDotsAria': 'Выбор слайда',
 };

@@ -50,12 +50,16 @@ export function applyStaticTranslations(): void {
 
 function updateHeadForLang(): void {
   document.documentElement.lang = getLang();
-  const canonical = document.getElementById('canonical-link') as HTMLLinkElement | null;
-  if (!canonical) return;
   const url = new URL(window.location.href);
   url.search = getLang() === 'ru' ? '?lang=ru' : '';
   url.hash = '';
-  canonical.href = url.toString();
+  const canonicalUrl = url.toString();
+
+  const canonical = document.getElementById('canonical-link') as HTMLLinkElement | null;
+  if (canonical) canonical.href = canonicalUrl;
+
+  const ogUrl = document.getElementById('og-url-meta') as HTMLMetaElement | null;
+  if (ogUrl) ogUrl.content = canonicalUrl;
 }
 
 function currentUrlWithLang(lang: Lang): string {
