@@ -97,5 +97,10 @@ export function initI18n(): void {
       setLang(link.dataset.langLink === 'ru' ? 'ru' : 'uk');
     });
   });
+  // Browser back/forward changes window.location.search (our pushState history entries)
+  // without firing any of our own handlers — re-derive from the URL and re-render.
+  window.addEventListener('popstate', () => {
+    translatePage();
+  });
   translatePage();
 }
