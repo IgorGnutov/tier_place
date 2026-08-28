@@ -9,15 +9,16 @@ import { CONTENT_REGISTRY, type ContentBlock } from './content-registry';
 import { callApi, showStatus } from './api';
 
 function openEditor(
-  item: HTMLElement,
+  scope: HTMLElement,
   block: ContentBlock,
   currentHtml: string,
   password: string,
+  lang: 'uk' | 'ru',
   onSaved: (newHtml: string) => void
 ): void {
-  const head = item.querySelector('.admin-block__head') as HTMLElement;
+  const head = scope.querySelector('.admin-block__lang-head') as HTMLElement;
   const editBtn = head.querySelector('[data-edit]') as HTMLButtonElement;
-  const preview = item.querySelector('.admin-block__preview') as HTMLElement;
+  const preview = scope.querySelector('.admin-block__preview') as HTMLElement;
   editBtn.hidden = true;
 
   const editorWrap = document.createElement('div');
@@ -59,7 +60,7 @@ function openEditor(
     const html = quill.root.innerHTML;
 
     try {
-      const result = await callApi('save', { password, key: block.key, html });
+      const result = await callApi('save', { password, key: block.key, html, lang });
       if (result.ok) {
         onSaved(html);
         exitEditor(html);
@@ -80,8 +81,11 @@ export async function initContentTab(container: HTMLElement, password: string): 
 
   const { rows } = await loadCsv(SHEET_CONTENT_CSV, LOCAL_CONTENT_CSV);
   const values = new Map<string, string>();
+  const valuesRu = new Map<string, string>();
   for (const row of rows) {
-    if (row.key) values.set(row.key, row.value ?? '');
+    if (!row.key) continue;
+    values.set(row.key, row.value ?? '');
+    valuesRu.set(row.key, row.value_ru ?? '');
   }
 
   const groups = new Map<string, ContentBlock[]>();
@@ -100,21 +104,41 @@ export async function initContentTab(container: HTMLElement, password: string): 
 
     for (const block of blocks) {
       const currentHtml = values.get(block.key) || block.defaultHtml;
+      const currentRuHtml = valuesRu.get(block.key) || block.defaultHtmlRu;
       const item = document.createElement('article');
       item.className = 'admin-block';
       item.innerHTML = `
         <div class="admin-block__head">
           <span class="admin-block__label">${block.label}</span>
-          <button class="btn btn--outline btn--small" data-edit>Редагувати</button>
         </div>
-        <div class="admin-block__preview">${currentHtml}</div>
+        <div class="admin-block__lang" data-lang="uk">
+          <div class="admin-block__lang-head">
+            <span class="admin-block__lang-tag">UA</span>
+            <button class="btn btn--outline btn--small" data-edit>Редагувати</button>
+          </div>
+          <div class="admin-block__preview">${currentHtml}</div>
+        </div>
+        <div class="admin-block__lang" data-lang="ru">
+          <div class="admin-block__lang-head">
+            <span class="admin-block__lang-tag">RU</span>
+            <button class="btn btn--outline btn--small" data-edit>Редагувати</button>
+          </div>
+          <div class="admin-block__preview">${currentRuHtml}</div>
+        </div>
       `;
       section.appendChild(item);
 
-      const editBtn = item.querySelector('[data-edit]') as HTMLButtonElement;
-      editBtn.addEventListener('click', () =>
-        openEditor(item, block, values.get(block.key) || block.defaultHtml, password, (newHtml) => {
+      const uaScope = item.querySelector('[data-lang="uk"]') as HTMLElement;
+      const ruScope = item.querySelector('[data-lang="ru"]') as HTMLElement;
+
+      (uaScope.querySelector('[data-edit]') as HTMLButtonElement).addEventListener('click', () =>
+        openEditor(uaScope, block, values.get(block.key) || block.defaultHtml, password, 'uk', (newHtml) => {
           values.set(block.key, newHtml);
+        })
+      );
+      (ruScope.querySelector('[data-edit]') as HTMLButtonElement).addEventListener('click', () =>
+        openEditor(ruScope, block, valuesRu.get(block.key) || block.defaultHtmlRu, password, 'ru', (newHtml) => {
+          valuesRu.set(block.key, newHtml);
         })
       );
     }

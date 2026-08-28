@@ -5,7 +5,9 @@
  * Розширення → Apps Script → вставити весь цей файл замість Code.gs.
  *
  * Одноразове налаштування:
- * 1. Створіть у таблиці лист з назвою "Контент" і заголовками в першому рядку: key, value.
+ * 1. Створіть у таблиці лист з назвою "Контент" і заголовками в першому рядку: key, value,
+ *    value_ru (третя колонка — необов'язкова, з'являється сама при першому збереженні
+ *    російського тексту через /admin).
  *    Лист "Замовлення" створюється автоматично при першому замовленні — вручну створювати не треба.
  * 2. Project Settings (⚙) → Script Properties → додати властивості:
  *    - ADMIN_PASSWORD — пароль для входу в /admin
@@ -61,7 +63,7 @@ function doPost(e) {
     if (!payload.key) {
       return jsonResponse({ ok: false, error: 'Не вказано ключ блоку' });
     }
-    saveContentValue_(payload.key, payload.html || '');
+    saveContentValue_(payload.key, payload.html || '', payload.lang === 'ru' ? 'ru' : 'uk');
     return jsonResponse({ ok: true });
   }
 
@@ -112,22 +114,38 @@ function checkPassword_(password) {
   return !!expected && password === expected;
 }
 
-function saveContentValue_(key, html) {
+function saveContentValue_(key, html, lang) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONTENT_SHEET_NAME);
   if (!sheet) {
     sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet(CONTENT_SHEET_NAME);
-    sheet.appendRow(['key', 'value']);
+    sheet.appendRow(['key', 'value', 'value_ru']);
   }
+  ensureContentHeaders_(sheet);
 
+  var col = lang === 'ru' ? 3 : 2;
   var data = sheet.getDataRange().getValues();
   for (var row = 1; row < data.length; row++) {
     if (data[row][0] === key) {
-      sheet.getRange(row + 1, 2).setValue(html);
+      sheet.getRange(row + 1, col).setValue(html);
       return;
     }
   }
 
-  sheet.appendRow([key, html]);
+  var newRow = ['', '', ''];
+  newRow[0] = key;
+  newRow[col - 1] = html;
+  sheet.appendRow(newRow);
+}
+
+/**
+ * Старі таблиці могли створити лист "Контент" ще без третьої колонки value_ru — додаємо
+ * заголовок, якщо його бракує, не чіпаючи наявні дані в A/B.
+ */
+function ensureContentHeaders_(sheet) {
+  var header = sheet.getRange(1, 1, 1, 3).getValues()[0];
+  if (header[0] !== 'key') sheet.getRange(1, 1).setValue('key');
+  if (header[1] !== 'value') sheet.getRange(1, 2).setValue('value');
+  if (header[2] !== 'value_ru') sheet.getRange(1, 3).setValue('value_ru');
 }
 
 function getOrCreateOrdersSheet_() {
@@ -247,7 +265,7 @@ function sendTelegramOrderNotification_(orderId, timestamp, payload, deliveryMet
       : 'Самовивіз з магазину';
 
   var phone = payload.phone || '';
-  var phoneLine = phone ? 'Телефон: <a href="tel:' + escapeHtml_(phoneToTelHref_(phone)) + '">' + escapeHtml_(phone) + '</a>' : 'Телефон: ';
+  var phoneLine = 'Телефон: ' + escapeHtml_(phone);
 
   var lines = [
     '🛒 Нове замовлення ' + escapeHtml_(orderId),
@@ -270,21 +288,6 @@ function sendTelegramOrderNotification_(orderId, timestamp, payload, deliveryMet
     muteHttpExceptions: true,
   });
   logTelegramDebug_(orderId, 'HTTP ' + response.getResponseCode() + ': ' + response.getContentText());
-}
-
-/**
- * Готує номер телефону для tel:-посилання: лишає лише цифри та початковий +, а український
- * номер, введений без коду країни (0XXXXXXXXX), доповнює до +380XXXXXXXXX.
- */
-function phoneToTelHref_(phone) {
-  var digits = String(phone).replace(/[^\d+]/g, '');
-  if (digits.charAt(0) === '+') {
-    return digits;
-  }
-  if (digits.length === 10 && digits.charAt(0) === '0') {
-    return '+38' + digits;
-  }
-  return '+' + digits;
 }
 
 function escapeHtml_(value) {
