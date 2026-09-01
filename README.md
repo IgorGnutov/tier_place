@@ -25,11 +25,31 @@ npm run typecheck   # перевірка типів TypeScript
 
 ## Деплой
 
-Сайт повністю статичний — після `npm run build` вміст папки `dist/` можна викласти куди завгодно:
+Сайт повністю статичний — після `npm run build` вміст папки `dist/` можна викласти куди завгодно.
+`vite.config.ts` налаштований з `base: './'`, тому сайт коректно працює і в корені домену, і в
+підпапці репозиторію.
 
-- **GitHub Pages**: увімкнути Pages з гілки/екшена, що публікує вміст `dist/` (наприклад, через
-  `actions/upload-pages-artifact` після кроку `npm run build`). `vite.config.ts` вже налаштований з
-  `base: './'`, тому сайт коректно працює і в корені домену, і в підпапці репозиторію.
+**Поточний деплой — GitHub Actions → власний хостинг по FTP**
+(`.github/workflows/deploy.yml`): кожен push у `main` збирає проєкт і заливає вміст `dist/` на
+хостинг через `SamKirkland/FTP-Deploy-Action` (протокол `ftps`). Потрібні GitHub Secrets
+(Settings → Secrets and variables → Actions):
+
+| Secret            | Значення                                                                 |
+|-------------------|---------------------------------------------------------------------------|
+| `FTP_SERVER`      | хост FTP-сервера (панель хостингу → FTP → Користувачі FTP)                |
+| `FTP_USERNAME`    | FTP-логін                                                                  |
+| `FTP_PASSWORD`    | FTP-пароль                                                                 |
+| `FTP_REMOTE_DIR`  | шлях до кореня сайту на хостингу (напр. `/tire-place.com.ua/public_html/`) |
+
+Дія повністю синхронізує `FTP_REMOTE_DIR` з поточним `dist/` (видаляє файли на сервері, яких
+немає в білді) — не тримайте там вручну завантажені файли, вони будуть видалені при наступному
+деплої. Якщо хостинг не підтримує FTPS (`protocol: ftps` у workflow), зʼявиться помилка
+підключення — тоді заміните на `protocol: ftp` (простий FTP, без шифрування).
+
+Альтернативи, якщо потрібно змінити спосіб деплою:
+- **SSH/rsync**: `burnett01/rsync-deployments` — безпечніше за FTP (ключ замість пароля,
+  шифрований канал), потребує робочого SSH-доступу з боку хостингу.
+- **GitHub Pages**: `actions/upload-pages-artifact` + `actions/deploy-pages` після кроку `npm run build`.
 - **Netlify / Cloudflare Pages**: Build command `npm run build`, Publish directory `dist`.
 
 ## Структура проєкту
