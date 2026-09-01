@@ -36,8 +36,6 @@ export const CONTACTS = {
   phoneHref: 'tel:+380980719393',
   telegramUsername: 'AnastasiyaBaza',
   telegramUrl: 'https://t.me/AnastasiyaBaza',
-  // TODO: підставити реальний Instagram власника.
-  instagramUrl: '#',
   address: 'Авторинок «Термінал», вулиця Нікопольське Шосе 1Г, Кривий Ріг',
   lat: 47.8860397,
   lng: 33.3937558,

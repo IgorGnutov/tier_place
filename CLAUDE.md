@@ -99,8 +99,7 @@ domain root (Netlify/Cloudflare Pages) or in a GitHub Pages repo subpath.
 - **Sheet column contracts:** the exact header names each CSV must have (tires/wheels/service) are
   documented in `README.md` — changing a `describe()`/`FieldDef` key in code must stay in sync with
   the corresponding Google Sheet header, since sheet data is read by header name.
-- Known placeholders not yet filled in by the site owner: `CONTACTS.instagramUrl` (`#`) and
-  `CONTACTS.hoursNote` (approximate) — see `SEO.md` for the full list before "finalizing" anything
-  domain- or contact-related. The production domain is `tire-place.com.ua` (hosted at adm.tools,
+- Known placeholders not yet filled in by the site owner: `CONTACTS.hoursNote` (approximate) —
+  see `SEO.md` for the full list before "finalizing" anything domain- or contact-related. The production domain is `tire-place.com.ua` (hosted at adm.tools,
   deployed via `.github/workflows/deploy.yml` on push to `main`), already set in `index.html` SEO
   tags, `public/robots.txt`, and `public/sitemap.xml`.
