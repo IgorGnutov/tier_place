@@ -279,9 +279,8 @@ Apps Script), рядок у самій Google Таблиці не видаляє
 - **Google Sheets** — таблиці для шин і дисків підключені й наповнені даними.
 - **Адмінка `/admin`** — поки не задеплоєна (`CONTENT_API_URL` в `src/config.ts` порожній) —
   кроки налаштування вище, розділ "Адмінка: редагування текстових блоків".
-- **Домен** — у `index.html` (canonical, OG/Twitter-теги, JSON-LD) і в `public/robots.txt`/
-  `public/sitemap.xml` зараз стоїть плейсхолдер `https://tireplace.com.ua/` — замінити на реальний
-  домен, коли він буде визначений.
+- **Домен** — `https://tire-place.com.ua/` проставлено в `index.html` (canonical, OG/Twitter-теги,
+  JSON-LD), `public/robots.txt` і `public/sitemap.xml`.
 - **Google Business Profile, відгуки** — див. чекліст у `SEO.md`.
 
 ## Обмеження, про які варто знати

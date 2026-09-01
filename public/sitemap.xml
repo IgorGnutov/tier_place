@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://tireplace.com.ua/</loc>
+    <loc>https://tire-place.com.ua/</loc>
     <lastmod>2026-08-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="uk" href="https://tireplace.com.ua/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://tireplace.com.ua/?lang=ru" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://tireplace.com.ua/" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://tire-place.com.ua/" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tire-place.com.ua/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tire-place.com.ua/" />
   </url>
   <url>
-    <loc>https://tireplace.com.ua/?lang=ru</loc>
+    <loc>https://tire-place.com.ua/?lang=ru</loc>
     <lastmod>2026-08-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="uk" href="https://tireplace.com.ua/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://tireplace.com.ua/?lang=ru" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://tireplace.com.ua/" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://tire-place.com.ua/" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://tire-place.com.ua/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://tire-place.com.ua/" />
   </url>
 </urlset>
