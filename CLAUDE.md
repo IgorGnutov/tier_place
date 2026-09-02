@@ -30,11 +30,18 @@ There is no linter configured either.
   `SHEET_*_CSV` string means "use only the local demo CSV" (see `sheetCsvUrl()`).
 - `src/js/sheets.ts` (`loadCsv`) fetches the sheet CSV, caching successful parses in
   `sessionStorage` for `SHEET_CACHE_TTL_MS` (5 min). On any failure — network error, HTTP error, or
-  Google returning an HTML login page (public sharing not enabled) — it falls back to the local CSV
-  in `public/data/`. An empty-but-reachable sheet (0 data rows) is treated the same as unreachable.
-  Callers get back `{ rows, source: 'sheet'|'local'|'cache', error }`; `render-products.ts` and
-  `render-service.ts` use a non-null `error` to show a "showing demo data" warning next to the count
-  even when rows rendered successfully from the fallback.
+  Google returning an HTML login page (public sharing not enabled) — its default behavior falls back
+  to the local CSV in `public/data/`. An empty-but-reachable sheet (0 data rows) is treated the same
+  as unreachable. Callers get back `{ rows, source: 'sheet'|'local'|'cache'|'error', error }`.
+  `render-products.ts` (tires/wheels catalogs) calls it with `{ allowLocalFallback: false }` —
+  product data must always come from the live sheet; on failure it shows an explicit
+  "Товари на даний момент не доступні" error state with a retry button instead of silently
+  rendering stale local demo data. `content.ts`/`admin/content-tab.ts` (the "Контент" sheet) keep
+  the default fallback-to-local behavior, since that's a soft text-override feature, not product data.
+- `public/.htaccess` sets a CSP; `connect-src` must include `https://*.googleusercontent.com`
+  (the Sheets CSV export redirect target) and `img-src` must allow arbitrary `https:` hosts (product
+  photo URLs pasted into the sheet can point anywhere, e.g. postimg.cc) — tightening either silently
+  breaks sheet loading or product photos without throwing any visible error.
 - `src/js/csv.ts` wraps Papa Parse (BOM stripping, header/value trimming) plus `parsePrice` /
   `parseBool` normalizers so sheet columns can contain messy human input (`"1 200 грн"`, `так/ni`,
   `+/-`, etc).

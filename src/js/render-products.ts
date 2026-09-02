@@ -179,13 +179,15 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   renderSkeleton(grid);
   countEl.textContent = t('product.loading', 'Завантаження…');
 
-  const result = await loadCsv(config.sheetUrl, config.localUrl);
+  // allowLocalFallback: false — товарні каталоги завжди мають показувати живі дані з
+  // таблиці; якщо фетч впав, показуємо явну помилку, а не застарілий локальний demo-CSV.
+  const result = await loadCsv(config.sheetUrl, config.localUrl, { allowLocalFallback: false });
 
   if (result.rows.length === 0) {
     const showEmptyState = () =>
       renderState(
         grid,
-        result.error ? `${t('product.loadErrorPrefix', 'Не вдалося завантажити дані: ')}${result.error}` : t('product.noProductsYet', 'Товарів поки немає.'),
+        result.error ? t('product.unavailable', 'Товари на даний момент не доступні') : t('product.noProductsYet', 'Товарів поки немає.'),
         Boolean(result.error),
         () => initCatalog(config)
       );
@@ -193,11 +195,6 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
     countEl.textContent = '';
     onLangChange(showEmptyState);
     return;
-  }
-
-  if (result.error) {
-    // Показали фолбек-дані, але попереджаємо, що це не "живі" дані з таблиці.
-    countEl.dataset.warning = result.error;
   }
 
   const rows = result.rows;
@@ -282,8 +279,7 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
       filtered.slice(0, visibleCount).forEach((row) => grid.appendChild(renderCard(config.describe(row))));
     }
 
-    const warningSuffix = countEl.dataset.warning ? t('product.foundDemoSuffix', ' (показано демо-дані, таблиця тимчасово недоступна)') : '';
-    countEl.textContent = `${t('product.foundLabel', 'Знайдено')}: ${filtered.length}${warningSuffix}`;
+    countEl.textContent = `${t('product.foundLabel', 'Знайдено')}: ${filtered.length}`;
 
     if (loadMoreWrap) loadMoreWrap.hidden = filtered.length <= visibleCount;
   }

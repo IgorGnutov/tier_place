@@ -9,7 +9,7 @@ interface CacheEntry {
 
 export interface LoadResult {
   rows: CsvRow[];
-  source: 'sheet' | 'local' | 'cache';
+  source: 'sheet' | 'local' | 'cache' | 'error';
   error: string | null;
 }
 
@@ -53,9 +53,20 @@ async function fetchAndParseSheet(url: string): Promise<CsvRow[]> {
 
 /**
  * Завантажує CSV: спершу sheetUrl (з кешем sessionStorage), при невдачі — localUrl.
- * Якщо sheetUrl порожній — одразу йде в localUrl.
+ * Якщо sheetUrl порожній — одразу йде в localUrl (навмисний dev-режим "таблицю ще не
+ * налаштували", див. SHEET_*_CSV в config.ts).
+ *
+ * allowLocalFallback: false — коли sheetUrl налаштований, але фетч впав, НЕ підміняти
+ * товари демо-даними мовчки: товарні каталоги мають показувати або живі дані з таблиці,
+ * або явну помилку (result.source === 'error'), а не застарілий/невідповідний реальному
+ * асортименту локальний CSV.
  */
-export async function loadCsv(sheetUrl: string, localUrl: string): Promise<LoadResult> {
+export async function loadCsv(
+  sheetUrl: string,
+  localUrl: string,
+  opts: { allowLocalFallback?: boolean } = {}
+): Promise<LoadResult> {
+  const { allowLocalFallback = true } = opts;
   const cacheKey = `sheet-cache:${sheetUrl || localUrl}`;
 
   if (sheetUrl) {
@@ -69,14 +80,14 @@ export async function loadCsv(sheetUrl: string, localUrl: string): Promise<LoadR
       writeCache(cacheKey, rows);
       return { rows, source: 'sheet', error: null };
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Таблиця недоступна';
+      if (!allowLocalFallback) {
+        return { rows: [], source: 'error', error: message };
+      }
       // Падаємо на локальний файл, але повідомляємо про причину для дружнього повідомлення в UI.
       try {
         const localRows = await fetchAndParseSheet(localUrl);
-        return {
-          rows: localRows,
-          source: 'local',
-          error: err instanceof Error ? err.message : 'Таблиця недоступна',
-        };
+        return { rows: localRows, source: 'local', error: message };
       } catch (localErr) {
         return {
           rows: [],
