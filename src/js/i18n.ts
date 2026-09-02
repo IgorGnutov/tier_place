@@ -1,7 +1,10 @@
-// Мовний рушій: мова визначається виключно з URL (?lang=ru), ніколи не зберігається —
-// українська лишається дефолтом для кожного нового заходу. Перемикання відбувається
-// без перезавантаження (history.pushState) для реальних відвідувачів, але справжні
-// <a href> лишають шлях доступним і для сканування ботом без виконання JS.
+// Мовний рушій: мова визначається з шляху (/ru/), ніколи не зберігається — українська
+// лишається дефолтом для кожного нового заходу. Перемикання відбувається без
+// перезавантаження (history.pushState) для реальних відвідувачів, але справжні <a href>
+// лишають шлях доступним і для сканування ботом без виконання JS: /ru/ — окремий статичний
+// HTML (generate-ru-html.mjs при білді) з вбудованими RU og:title/description/twitter:*,
+// бо соцботи не виконують JS і завжди бачили б українські мета-теги інакше.
+// Старий формат ?lang=ru лишається як fallback для вже розшарених/проіндексованих посилань.
 import { RU_STRINGS } from '../i18n/strings';
 
 export type Lang = 'uk' | 'ru';
@@ -10,6 +13,8 @@ type LangChangeListener = (lang: Lang) => void;
 const listeners: LangChangeListener[] = [];
 
 export function getLang(): Lang {
+  const path = window.location.pathname;
+  if (path === '/ru' || path.startsWith('/ru/')) return 'ru';
   return new URLSearchParams(window.location.search).get('lang') === 'ru' ? 'ru' : 'uk';
 }
 
@@ -50,10 +55,7 @@ export function applyStaticTranslations(): void {
 
 function updateHeadForLang(): void {
   document.documentElement.lang = getLang();
-  const url = new URL(window.location.href);
-  url.search = getLang() === 'ru' ? '?lang=ru' : '';
-  url.hash = '';
-  const canonicalUrl = url.toString();
+  const canonicalUrl = `${window.location.origin}${getLang() === 'ru' ? '/ru/' : '/'}`;
 
   const canonical = document.getElementById('canonical-link') as HTMLLinkElement | null;
   if (canonical) canonical.href = canonicalUrl;
@@ -63,10 +65,7 @@ function updateHeadForLang(): void {
 }
 
 function currentUrlWithLang(lang: Lang): string {
-  const url = new URL(window.location.href);
-  if (lang === 'ru') url.searchParams.set('lang', 'ru');
-  else url.searchParams.delete('lang');
-  return `${url.pathname}${url.search}${url.hash}`;
+  return `${lang === 'ru' ? '/ru/' : '/'}${window.location.hash}`;
 }
 
 function refreshSwitchLinks(): void {
@@ -101,7 +100,7 @@ export function initI18n(): void {
       setLang(link.dataset.langLink === 'ru' ? 'ru' : 'uk');
     });
   });
-  // Browser back/forward changes window.location.search (our pushState history entries)
+  // Browser back/forward changes window.location.pathname (our pushState history entries)
   // without firing any of our own handlers — re-derive from the URL and re-render.
   window.addEventListener('popstate', () => {
     translatePage();

@@ -1,6 +1,12 @@
 // Плаский словник RU-перекладів. Ключ відсутній тут = слово однакове в обох мовах
 // (напр. "Диски", "Бренд") — t()/applyStaticTranslations просто лишають український
 // оригінал. Українські рядки НЕ дублюються тут — вони живуть в index.html/*.ts як є.
+//
+// head/meta.* рядки винесені в ./ru-meta.json — той самий файл читає
+// scripts/generate-ru-html.mjs при білді, щоб RU-мета (og:title/description/twitter:*)
+// потрапляла у статичний dist/ru/index.html для соцботів, які не виконують JS.
+import ruMeta from './ru-meta.json';
+
 export const RU_STRINGS: Record<string, string> = {
   // --- nav ---
   'nav.tires': 'Шины',
@@ -8,15 +14,7 @@ export const RU_STRINGS: Record<string, string> = {
   'nav.contacts': 'Контакты',
 
   // --- head / meta ---
-  'meta.title': 'Шины, диски, аккумуляторы Кривой Рог — TIRE PLACE',
-  'meta.description':
-    'Автомагазин TIRE PLACE в Кривом Роге: шины и диски в наличии, аккумуляторы, собственный шиномонтаж на авторынке «Терминал». Подбор по размеру.',
-  'meta.ogTitle': 'TIRE PLACE — шины, диски и аккумуляторы в Кривом Роге',
-  'meta.ogDescription':
-    'Твоё шинное пространство. Шины, диски, аккумуляторы и собственный шиномонтаж на авторынке «Терминал» в Кривом Роге.',
-  'meta.ogLocale': 'ru_RU',
-  'meta.twitterDescription':
-    'Твоё шинное пространство. Шины, диски, аккумуляторы и собственный шиномонтаж на авторынке «Терминал».',
+  ...ruMeta,
 
   // --- hero ---
   'hero.trust1': 'В наличии и на складе',
