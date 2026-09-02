@@ -159,6 +159,18 @@ button {
   color: var(--color-text-muted);
 }
 
+/* Ручний перенос рядка всередині контентних блоків (Google Sheets, /admin), який має діяти
+   лише на десктопі — вставляється прямо в HTML тексту як <br class="content-break-md">. */
+.content-break-md {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .content-break-md {
+    display: initial;
+  }
+}
+
 /* Прийом з вивіски: чергування оранжевого/білого в заголовках секцій */
 .accent {
   color: var(--color-accent);
