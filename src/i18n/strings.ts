@@ -48,6 +48,8 @@ export const RU_STRINGS: Record<string, string> = {
   'filters.sortNameAsc': 'По названию (А–Я)',
   'filters.pcd': 'Разболтовка (PCD)',
   'filters.et': 'Вылет (ET)',
+  'filters.year': 'Год',
+  'filters.country': 'Страна',
   'product.loading': 'Загрузка…',
   'product.loadMore': 'Показать ещё',
 

@@ -33,8 +33,7 @@ interface CardInfo {
   key: string;
   /** Короткий рядок розміру/характеристик для відображення в кошику. */
   sizeLine: string;
-  /** undefined — картка без фото-блоку взагалі (шини); string|null — з фото-блоком (диски),
-   *  null означає "фото поки немає" (показуємо плейсхолдер). */
+  /** string|null — з фото-блоком, null означає "фото поки немає" (показуємо плейсхолдер). */
   imageUrl?: string | null;
 }
 
@@ -346,11 +345,14 @@ function tiresDescribe(row: CsvRow): CardInfo {
       { label: t('filters.studded', 'Шипи'), value: parseBool(row.studded) ? t('product.yes', 'Так') : t('product.no', 'Ні') },
       ...(row.load_index ? [{ label: t('product.loadIndex', 'Індекс навантаження'), value: row.load_index }] : []),
       ...(row.speed_index ? [{ label: t('product.speedIndex', 'Індекс швидкості'), value: row.speed_index }] : []),
+      ...(row.year ? [{ label: t('filters.year', 'Рік'), value: row.year }] : []),
+      ...(row.country ? [{ label: t('filters.country', 'Країна'), value: row.country }] : []),
     ],
     price,
     inStock: parseBool(row.in_stock),
     key: `tires:${title}:${size}`,
     sizeLine: size,
+    imageUrl: row.image_url?.trim() || null,
   };
 }
 
@@ -382,6 +384,8 @@ const TIRES_FIELDS: FieldDef[] = [
   { key: 'season', label: 'Сезон' },
   { key: 'studded', label: 'Шипи', boolean: true },
   { key: 'brand', label: 'Бренд' },
+  { key: 'year', label: 'Рік' },
+  { key: 'country', label: 'Країна' },
 ];
 
 const WHEELS_FIELDS: FieldDef[] = [
