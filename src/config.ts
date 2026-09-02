@@ -27,6 +27,9 @@ export const CONTENT_API_URL =
 // Скільки часу тримати відповідь Google Sheets у sessionStorage, щоб не бити по таблиці на кожен перехід.
 export const SHEET_CACHE_TTL_MS = 5 * 60 * 1000;
 
+// Google Analytics 4 Measurement ID. Порожній рядок — аналітика вимкнена (initAnalytics нічого не робить).
+export const GA_MEASUREMENT_ID = 'G-PTNM1W4XTG';
+
 // Посилання на саму картку закладу в Google Maps (той самий "place", що й у виносці на скріні).
 const MAP_PLACE_URL =
   'https://www.google.com/maps/place/%D0%90%D0%B2%D1%82%D0%BE%D0%BC%D0%B0%D0%B3%D0%B0%D0%B7%D0%B8%D0%BD+%D0%A8%D0%B8%D0%BD+%D1%82%D0%B0+%D0%90%D0%BA%D1%83%D0%BC%D1%83%D0%BB%D1%8F%D1%82%D0%BE%D1%80%D1%96%D0%B2+TIRE+PLACE+%D0%9A%D1%80%D0%B8%D0%B2%D0%B8%D0%B9+%D0%A0%D1%96%D0%B3/@47.8861199,33.3934884,20z/data=!4m15!1m8!3m7!1s0x40db2777b45a2567:0x43eca4088a29b7de!2z0JDQstGC0L7QvNCw0LPQsNC30LjQvSDQqNC40L0g0YLQsCDQkNC60YPQvNGD0LvRj9GC0L7RgNGW0LIgVElSRSBQTEFDRSDQmtGA0LjQstC40Lkg0KDRltCz!8m2!3d47.8860397!4d33.3937558!10e1!16s%2Fg%2F11vzw3hn6v!3m5!1s0x40db2777b45a2567:0x43eca4088a29b7de!8m2!3d47.8860397!4d33.3937558!16s%2Fg%2F11vzw3hn6v';

@@ -20,9 +20,10 @@
   # в Google Таблицю довільними посиланнями (postimg.cc, Google Drive тощо), список нема як
   # обмежити наперед. connect-src потребує *.googleusercontent.com — Sheets export CSV
   # (docs.google.com/.../export?format=csv) редіректить саме туди, без цього хоста фетч
-  # блокується CSP і сайт мовчки падає на демо-дані.
+  # блокується CSP і сайт мовчки падає на демо-дані. script-src/connect-src також дозволяють
+  # googletagmanager.com/google-analytics.com — для Google Analytics (src/js/analytics.ts).
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://script.google.com; frame-src https://www.google.com; base-uri 'self'; form-action 'self'; object-src 'none'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://script.google.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com; frame-src https://www.google.com; base-uri 'self'; form-action 'self'; object-src 'none'"
 </IfModule>

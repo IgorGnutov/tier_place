@@ -7,6 +7,7 @@ import { initServiceCta } from './js/render-service';
 import { initMap } from './js/map';
 import { initContent } from './js/content';
 import { initCart } from './js/cart-ui';
+import { initAnalytics } from './js/analytics';
 
 function initFooterYear(): void {
   const yearEl = document.getElementById('footer-year');
@@ -36,3 +37,4 @@ initFooterYear();
 initFloatingCta();
 initContent();
 initCart();
+initAnalytics();
