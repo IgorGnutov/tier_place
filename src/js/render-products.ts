@@ -13,6 +13,7 @@ import {
 } from './filters';
 import { showToast } from './telegram';
 import { addItem } from './cart';
+import { getProductImageManifest, type ProductImageSet } from './product-images';
 import { t, onLangChange } from './i18n';
 import { dedupeSlugs, tireSlug, wheelSlug } from './slug';
 import {
@@ -68,7 +69,7 @@ function renderSkeleton(grid: HTMLElement): void {
   }
 }
 
-function renderCard(info: CardInfo): HTMLElement {
+function renderCard(info: CardInfo, imageManifest: Record<string, ProductImageSet>): HTMLElement {
   const card = document.createElement('article');
   card.className = 'product-card';
 
@@ -83,7 +84,6 @@ function renderCard(info: CardInfo): HTMLElement {
     photo.className = 'product-card__photo';
     if (info.imageUrl) {
       const img = document.createElement('img');
-      img.src = info.imageUrl;
       img.alt = info.title;
       img.loading = 'lazy';
       img.addEventListener('error', () => {
@@ -92,7 +92,31 @@ function renderCard(info: CardInfo): HTMLElement {
         photo.innerHTML = '';
         photo.classList.add('product-card__photo--placeholder');
       });
-      photo.appendChild(img);
+
+      // Якщо build-скрипт заздалегідь стиснув це фото (див. product-images.ts) — віддаємо
+      // мініатюру AVIF/WebP через <picture>, інакше показуємо оригінал з таблиці як і раніше.
+      const optimized = imageManifest[info.imageUrl];
+      if (optimized?.avif || optimized?.webp) {
+        const picture = document.createElement('picture');
+        if (optimized.avif) {
+          const source = document.createElement('source');
+          source.type = 'image/avif';
+          source.srcset = optimized.avif;
+          picture.appendChild(source);
+        }
+        if (optimized.webp) {
+          const source = document.createElement('source');
+          source.type = 'image/webp';
+          source.srcset = optimized.webp;
+          picture.appendChild(source);
+        }
+        img.src = optimized.jpg ?? info.imageUrl;
+        picture.appendChild(img);
+        photo.appendChild(picture);
+      } else {
+        img.src = info.imageUrl;
+        photo.appendChild(img);
+      }
     } else {
       photo.classList.add('product-card__photo--placeholder');
     }
@@ -193,7 +217,10 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
 
   // allowLocalFallback: false — товарні каталоги завжди мають показувати живі дані з
   // таблиці; якщо фетч впав, показуємо явну помилку, а не застарілий локальний demo-CSV.
-  const result = await loadCsv(config.sheetUrl, config.localUrl, { allowLocalFallback: false });
+  const [result, imageManifest] = await Promise.all([
+    loadCsv(config.sheetUrl, config.localUrl, { allowLocalFallback: false }),
+    getProductImageManifest(),
+  ]);
 
   if (result.rows.length === 0) {
     const showEmptyState = () =>
@@ -294,7 +321,7 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
     if (filtered.length === 0) {
       renderState(grid, t('product.notFound', 'Нічого не знайдено за обраними фільтрами.'), false);
     } else {
-      filtered.slice(0, visibleCount).forEach((row) => grid.appendChild(renderCard(config.describe(row))));
+      filtered.slice(0, visibleCount).forEach((row) => grid.appendChild(renderCard(config.describe(row), imageManifest)));
     }
 
     countEl.textContent = `${t('product.foundLabel', 'Знайдено')}: ${filtered.length}`;

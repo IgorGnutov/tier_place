@@ -92,6 +92,22 @@ client-rendered:**
   action delete-syncs `dist/` onto the server, so a "successful" build with zero product pages would
   wipe every already-published product page off the live site. An empty-but-reachable sheet (0 rows)
   is a legitimate non-fatal case and does exactly that, by design.
+- **Product photo optimization (`buildProductImageAssets` in `generate-product-pages.mjs`):**
+  product photos are arbitrary external URLs pasted into the sheet (postimg.cc etc. — see the CSP
+  note above) and are never resized/compressed at the source. Public image-resize proxies
+  (wsrv.nl/images.weserv.nl, statically.io) were tried and rejected — they block postimg.cc by
+  policy or have disabled their proxy endpoint outright, so depending on one in production would be
+  fragile. Instead, the build downloads every *distinct* `image_url` once (many rows share one stock
+  photo per model) and re-encodes it with `sharp` into local AVIF/WebP/JPEG at two widths: 480px
+  (`CARD_WIDTH`, written to `dist/data/product-images.json` — a manifest the client-rendered catalog
+  fetches at runtime, see `src/js/product-images.ts`/`render-products.ts`) and 900px (`DETAIL_WIDTH`,
+  embedded directly as a `<picture>` in the generated detail HTML, also used for `og:image`/
+  `twitter:image`/JSON-LD `image` so social scrapers don't depend on postimg.cc staying up). A
+  source narrower than a target width is not upscaled (both widths collapse to one file set). A
+  failure on one photo (dead link, unsupported format) is non-fatal — it's logged and that product
+  falls back to hotlinking the original URL, same as before this existed. `public/data/product-images.json`
+  ships a `{}` stub so `npm run dev`/local preview don't 404 on the manifest fetch; the real build
+  overwrites it in `dist/`.
 - The generated pages load the shared, unmodified `main.js`, which mutates `<head>` on startup:
   `i18n.ts`'s `updateHeadForLang()` rewrites `#canonical-link`/`#og-url-meta` to the homepage URL,
   and `applyStaticTranslations()` overwrites anything carrying `data-i18n`/`data-i18n-attr`. The

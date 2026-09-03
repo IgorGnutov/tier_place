@@ -8,7 +8,9 @@
 // Node 20 у CI й не може напряму імпортувати .ts. Змінюючи одне з двох місць — оновіть інше.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import Papa from 'papaparse';
+import sharp from 'sharp';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const sheetIds = JSON.parse(readFileSync(`${root}/src/data/sheet-ids.json`, 'utf8'));
@@ -138,6 +140,81 @@ function jsonForScript(value) {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
+// Фото товару — довільні зовнішні URL, вставлені вручну в Google Таблицю (postimg.cc тощо,
+// див. CLAUDE.md/.htaccess: img-src навмисно відкритий на будь-який https-хост). Публічні
+// image-proxy (wsrv.nl, statically.io) блокують саме postimg.cc/зловживані хости, тож
+// стискаємо самі: під час білда качаємо кожне унікальне фото один раз (товари часто ділять
+// одну стокову фотографію моделі шини на кілька розмірів) і кодуємо sharp'ом у AVIF/WebP/JPEG
+// — ті самі якості, що й в optimize-photos.mjs. Мініатюра (CARD_WIDTH) іде в JSON-маніфест,
+// який на клієнті читає product-images.ts для карток каталогу; більший варіант (DETAIL_WIDTH)
+// одразу вшивається в статичну сторінку товару нижче. Помилка на одному фото (мертве
+// посилання, недоступний хост) НЕ валить білд — товар просто лишається зі старим прямим
+// посиланням на оригінал, як до цієї оптимізації.
+const CARD_WIDTH = 480;
+const DETAIL_WIDTH = 900;
+const IMAGE_FORMATS = [
+  ['avif', (img) => img.avif({ quality: 55 })],
+  ['webp', (img) => img.webp({ quality: 70 })],
+  ['jpg', (img) => img.jpeg({ quality: 75, progressive: true, mozjpeg: true })],
+];
+const IMAGE_FETCH_CONCURRENCY = 6;
+
+async function encodeImageVariant(buffer, hash, width, root) {
+  const files = {};
+  for (const [format, applyFormat] of IMAGE_FORMATS) {
+    const relPath = `assets/products/${hash}-${width}.${format}`;
+    const pipeline = applyFormat(sharp(buffer).resize({ width, withoutEnlargement: true }));
+    await pipeline.toFile(`${root}/dist/${relPath}`);
+    files[format] = `/${relPath}`;
+  }
+  return files;
+}
+
+/** Качає й стискає кожне унікальне фото товару один раз. Повертає Map "оригінальний URL →
+ *  набір DETAIL_WIDTH-файлів" (для сторінок товару) і паралельно пише dist/data/product-images.json
+ *  з набором CARD_WIDTH-файлів (для карток каталогу на клієнті). */
+async function buildProductImageAssets(products, root) {
+  const urls = [...new Set(products.map((p) => p.imageUrl).filter(Boolean))];
+  const outDir = `${root}/dist/assets/products`;
+  mkdirSync(outDir, { recursive: true });
+
+  const cardManifest = {};
+  const detailAssets = new Map();
+
+  let cursor = 0;
+  async function worker() {
+    while (cursor < urls.length) {
+      const url = urls[cursor++];
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const buffer = Buffer.from(await res.arrayBuffer());
+        const meta = await sharp(buffer).metadata();
+        const sourceWidth = meta.width ?? DETAIL_WIDTH;
+        const hash = createHash('sha1').update(url).digest('hex').slice(0, 16);
+
+        const cardWidth = Math.min(CARD_WIDTH, sourceWidth);
+        const detailWidth = Math.min(DETAIL_WIDTH, sourceWidth);
+
+        const cardFiles = await encodeImageVariant(buffer, hash, cardWidth, root);
+        // Джерело вже вужче за DETAIL_WIDTH — не кодуємо той самий розмір вдруге.
+        const detailFiles = detailWidth === cardWidth ? cardFiles : await encodeImageVariant(buffer, hash, detailWidth, root);
+
+        cardManifest[url] = cardFiles;
+        detailAssets.set(url, detailFiles);
+      } catch (err) {
+        console.warn(`generate-product-pages: не вдалося оптимізувати фото ${url} — ${err.message}. Товар покаже оригінальне посилання.`);
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(IMAGE_FETCH_CONCURRENCY, urls.length) }, worker));
+
+  mkdirSync(`${root}/dist/data`, { recursive: true });
+  writeFileSync(`${root}/dist/data/product-images.json`, JSON.stringify(cardManifest));
+
+  return detailAssets;
+}
+
 function replaceMain(html, mainInnerHtml) {
   const startTag = '<main id="main">';
   const start = html.indexOf(startTag);
@@ -146,10 +223,24 @@ function replaceMain(html, mainInnerHtml) {
   return html.slice(0, start + startTag.length) + mainInnerHtml + html.slice(end);
 }
 
-function buildMainHtml(product) {
-  const photoHtml = product.imageUrl
-    ? `<img src="${escapeAttr(product.imageUrl)}" alt="${escapeAttr(product.title)}" loading="eager" />`
-    : `<div class="product-detail__photo--placeholder">Фото немає</div>`;
+function buildPhotoHtml(product, imageSet) {
+  if (!product.imageUrl) return `<div class="product-detail__photo--placeholder">Фото немає</div>`;
+  if (!imageSet) {
+    // Оптимізація цього фото не вдалась (buildProductImageAssets) — як і раніше, хотлінк на оригінал.
+    return `<img src="${escapeAttr(product.imageUrl)}" alt="${escapeAttr(product.title)}" loading="eager" />`;
+  }
+  const sources = [
+    imageSet.avif && `<source type="image/avif" srcset="${escapeAttr(imageSet.avif)}" />`,
+    imageSet.webp && `<source type="image/webp" srcset="${escapeAttr(imageSet.webp)}" />`,
+  ]
+    .filter(Boolean)
+    .join('');
+  const fallbackSrc = imageSet.jpg ?? product.imageUrl;
+  return `<picture>${sources}<img src="${escapeAttr(fallbackSrc)}" alt="${escapeAttr(product.title)}" loading="eager" /></picture>`;
+}
+
+function buildMainHtml(product, imageSet) {
+  const photoHtml = buildPhotoHtml(product, imageSet);
   const specsHtml = product.specs.map((s) => `<li>${escapeHtml(s.label)}: ${escapeHtml(s.value)}</li>`).join('');
   const statusClass = product.inStock ? 'status--in' : 'status--out';
   const statusText = product.inStock ? 'В наявності' : 'Немає в наявності';
@@ -177,16 +268,19 @@ function buildMainHtml(product) {
   `;
 }
 
-function buildProductPage(product, baseHtml) {
+function buildProductPage(product, baseHtml, imageSet) {
   const pageUrl = `https://tire-place.com.ua/${product.kind}/${product.slug}/`;
   const metaTitle = `${product.title} — купити в TIRE PLACE, Кривий Ріг`;
   const priceLine = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'ціна за запитом';
   const metaDescription = `${product.title}, ${product.size} — ${priceLine}. ${
     product.inStock ? 'В наявності' : 'Немає в наявності'
   } в автомагазині TIRE PLACE, Кривий Ріг.`;
+  // Соцмережі краще тягнути з власного домену (стабільніше, ніж покладатись, що postimg.cc
+  // лишиться доступним для скрапера) — беремо JPEG-варіант, якщо фото вдалось оптимізувати.
+  const ogImageUrl = imageSet?.jpg ? `https://tire-place.com.ua${imageSet.jpg}` : product.imageUrl;
 
   let html = baseHtml;
-  html = replaceMain(html, buildMainHtml(product));
+  html = replaceMain(html, buildMainHtml(product, imageSet));
   html = html.replace(/<title[^>]*>[^<]*<\/title>/, () => `<title>${escapeHtml(metaTitle)}</title>`);
   html = replaceAttr(html, '<meta name="description"[^>]*content="', metaDescription);
   html = replaceAttr(html, '<link rel="canonical" id="canonical-link" href="', pageUrl);
@@ -195,9 +289,9 @@ function buildProductPage(product, baseHtml) {
   html = replaceAttr(html, '<meta property="og:url" id="og-url-meta" content="', pageUrl);
   html = replaceAttr(html, '<meta name="twitter:title" content="', metaTitle);
   html = replaceAttr(html, '<meta name="twitter:description" content="', metaDescription);
-  if (product.imageUrl) {
-    html = replaceAttr(html, '<meta property="og:image" content="', product.imageUrl);
-    html = replaceAttr(html, '<meta name="twitter:image" content="', product.imageUrl);
+  if (ogImageUrl) {
+    html = replaceAttr(html, '<meta property="og:image" content="', ogImageUrl);
+    html = replaceAttr(html, '<meta name="twitter:image" content="', ogImageUrl);
     // Розміри 1200×900 стосувались фото вивіски з головної — до фото товару вони не підходять.
     html = removeAll(html, /[ \t]*<meta property="og:image:(?:width|height)" content="\d+" \/>[ \t]*\r?\n?/g, 'og:image:width/height');
   }
@@ -235,7 +329,7 @@ function buildProductPage(product, baseHtml) {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.title,
-    image: product.imageUrl ? [product.imageUrl] : undefined,
+    image: ogImageUrl ? [ogImageUrl] : undefined,
     sku: product.slug,
     offers: {
       '@type': 'Offer',
@@ -398,8 +492,10 @@ async function main() {
   }
 
   const baseHtml = readFileSync(`${root}/dist/index.html`, 'utf8');
+  const detailImageAssets = await buildProductImageAssets(products, root);
   for (const product of products) {
-    const html = buildProductPage(product, baseHtml);
+    const imageSet = product.imageUrl ? detailImageAssets.get(product.imageUrl) : undefined;
+    const html = buildProductPage(product, baseHtml, imageSet);
     writeProductPage(product, html, root);
   }
   writeSitemap(products, root);
