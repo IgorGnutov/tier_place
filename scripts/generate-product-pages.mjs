@@ -78,6 +78,119 @@ function dedupeSlugs(rows, slugOf) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/"/g, '&quot;');
+}
+
+function replaceAttr(source, matchPrefix, value) {
+  const re = new RegExp(`(${matchPrefix})[^"]*(")`);
+  if (!re.test(source)) throw new Error(`generate-product-pages: pattern not found — ${matchPrefix}`);
+  return source.replace(re, `$1${escapeAttr(value)}$2`);
+}
+
+function replaceMain(html, mainInnerHtml) {
+  const startTag = '<main id="main">';
+  const start = html.indexOf(startTag);
+  const end = html.indexOf('</main>', start);
+  if (start === -1 || end === -1) throw new Error('generate-product-pages: <main id="main"> not found in dist/index.html');
+  return html.slice(0, start + startTag.length) + mainInnerHtml + html.slice(end);
+}
+
+function buildMainHtml(product) {
+  const photoHtml = product.imageUrl
+    ? `<img src="${escapeAttr(product.imageUrl)}" alt="${escapeAttr(product.title)}" loading="eager" />`
+    : `<div class="product-detail__photo--placeholder">Фото немає</div>`;
+  const specsHtml = product.specs.map((s) => `<li>${escapeHtml(s.label)}: ${escapeHtml(s.value)}</li>`).join('');
+  const statusClass = product.inStock ? 'status--in' : 'status--out';
+  const statusText = product.inStock ? 'В наявності' : 'Немає в наявності';
+  const priceText = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'Ціна за запитом';
+  const backHref = product.kind === 'tires' ? '/#tires' : '/#wheels';
+  const productData = JSON.stringify({ key: product.key, title: product.title, sizeLine: product.size, price: product.price });
+
+  return `
+    <div class="container product-detail">
+      <a class="product-detail__back" href="${backHref}">← Назад до каталогу</a>
+      <div class="product-detail__grid">
+        <div class="product-detail__photo">${photoHtml}</div>
+        <div class="product-detail__body">
+          <h1 class="product-detail__title">${escapeHtml(product.title)}</h1>
+          <ul class="product-detail__specs">${specsHtml}</ul>
+          <span class="status ${statusClass}">${statusText}</span>
+          <div class="product-detail__footer">
+            <span class="product-detail__price">${priceText}</span>
+            <button type="button" class="btn" id="product-buy-btn"${product.inStock ? '' : ' disabled'}>Купити</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="application/json" id="product-data">${productData}</script>
+  `;
+}
+
+function buildProductPage(product, baseHtml) {
+  const pageUrl = `https://tire-place.com.ua/${product.kind}/${product.slug}/`;
+  const metaTitle = `${product.title} — купити в TIRE PLACE, Кривий Ріг`;
+  const priceLine = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'ціна за запитом';
+  const metaDescription = `${product.title}, ${product.size} — ${priceLine}. ${
+    product.inStock ? 'В наявності' : 'Немає в наявності'
+  } в автомагазині TIRE PLACE, Кривий Ріг.`;
+
+  let html = baseHtml;
+  html = replaceMain(html, buildMainHtml(product));
+  html = html.replace(/<title data-i18n="meta\.title">[^<]*<\/title>/, `<title data-i18n="meta.title">${escapeHtml(metaTitle)}</title>`);
+  html = replaceAttr(html, '<meta name="description"[^>]*content="', metaDescription);
+  html = replaceAttr(html, '<link rel="canonical" id="canonical-link" href="', pageUrl);
+  html = replaceAttr(html, '<meta property="og:title" content="', metaTitle);
+  html = replaceAttr(html, '<meta property="og:description" content="', metaDescription);
+  html = replaceAttr(html, '<meta property="og:url" id="og-url-meta" content="', pageUrl);
+  html = replaceAttr(html, '<meta name="twitter:title" content="', metaTitle);
+  html = replaceAttr(html, '<meta name="twitter:description" content="', metaDescription);
+  if (product.imageUrl) {
+    html = replaceAttr(html, '<meta property="og:image" content="', product.imageUrl);
+    html = replaceAttr(html, '<meta name="twitter:image" content="', product.imageUrl);
+  }
+
+  // Немає RU-версії сторінки товару (поза межами цієї задачі) — прибираємо hreflang-альтернативи
+  // й og:locale:alternate, щоб не посилатись на неіснуючу сторінку.
+  html = html.replace(/\s*<link rel="alternate" hreflang="[^"]*" href="[^"]*"\s*\/>/g, '');
+  html = html.replace(/\s*<meta property="og:locale:alternate" content="ru_RU"\s*\/>/, '');
+
+  const productJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.title,
+    image: product.imageUrl ? [product.imageUrl] : undefined,
+    sku: product.slug,
+    offers: {
+      '@type': 'Offer',
+      price: product.price ?? undefined,
+      priceCurrency: 'UAH',
+      availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      url: pageUrl,
+    },
+  };
+  html = html.replace('</head>', `  <script type="application/ld+json">${JSON.stringify(productJsonLd)}</script>\n</head>`);
+
+  // Сторінка лежить на 2 рівні глибше dist/index.html — переписуємо відносні шляхи на кореневі
+  // (той самий прийом, що вже застосований у generate-ru-html.mjs для /ru/; кореневий шлях
+  // резолвиться однаково незалежно від глибини поточної сторінки).
+  html = html.replace(/="\.\//g, '="/');
+  html = html.replace(/"assets\//g, '"/assets/');
+  html = html.replace(/, assets\//g, ', /assets/');
+
+  return html;
+}
+
+function writeProductPage(product, html, root) {
+  const outDir = `${root}/dist/${product.kind}/${product.slug}`;
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(`${outDir}/index.html`, html);
+}
+
 function describeTire(row) {
   const price = parsePrice(row.price);
   const title = `${row.brand ?? ''} ${row.model ?? ''} ${row.width}/${row.profile} R${row.diameter}`.trim();
@@ -155,10 +268,13 @@ async function main() {
     console.log('generate-product-pages: немає товарів для генерації сторінок (порожні або недоступні таблиці).');
     return;
   }
-  console.log(`generate-product-pages: знайдено ${products.length} товар(ів):`);
-  for (const p of products) {
-    console.log(`  /${p.kind}/${p.slug}/ — ${p.title} — ${p.price ?? 'ціна за запитом'}`);
+
+  const baseHtml = readFileSync(`${root}/dist/index.html`, 'utf8');
+  for (const product of products) {
+    const html = buildProductPage(product, baseHtml);
+    writeProductPage(product, html, root);
   }
+  console.log(`generate-product-pages: згенеровано ${products.length} сторінок товару.`);
 }
 
 main();
