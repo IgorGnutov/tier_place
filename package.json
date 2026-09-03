@@ -6,7 +6,7 @@
   "description": "Автомагазин TIRE PLACE — шини, диски, акумулятори, шиномонтаж (Кривий Ріг)",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/generate-ru-html.mjs",
+    "build": "vite build && node scripts/generate-ru-html.mjs && node scripts/generate-product-pages.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "optimize:photos": "node scripts/optimize-photos.mjs"
