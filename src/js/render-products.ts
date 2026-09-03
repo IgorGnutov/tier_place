@@ -74,7 +74,9 @@ function renderCard(info: CardInfo): HTMLElement {
 
   const link = document.createElement('a');
   link.className = 'product-card__link';
-  link.href = info.detailUrl;
+  // Без detailUrl (рядок таблиці без назви/розміру — сторінки товару для нього немає)
+  // лишаємо <a> без href: він не клікабельний і не веде в нікуди.
+  if (info.detailUrl) link.href = info.detailUrl;
 
   if (info.imageUrl !== undefined) {
     const photo = document.createElement('div');
@@ -210,7 +212,9 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   const rows = result.rows;
   const slugOf = idPrefix === 'tires' ? tireSlug : wheelSlug;
   dedupeSlugs(rows, slugOf).forEach((slug, i) => {
-    rows[i].__detailUrl = `/${idPrefix}/${slug}/`;
+    // Порожній slug — статичної сторінки для такого рядка білд не згенерував, тож картка
+    // лишається без посилання (див. renderCard).
+    rows[i].__detailUrl = slug ? `/${idPrefix}/${slug}/` : '';
   });
   let state: FilterState = readStateFromUrl(idPrefix, fields);
   const range = readRangeFromUrl(idPrefix);

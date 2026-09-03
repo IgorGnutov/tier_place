@@ -44,6 +44,9 @@ export function dedupeSlugs<T>(rows: T[], slugOf: (row: T) => string): string[] 
   const counts = new Map<string, number>();
   return rows.map((row) => {
     const base = slugOf(row);
+    // Порожній slug (усі колонки-ідентифікатори порожні) — не URL: повертаємо '', викликач
+    // такий рядок пропускає. Та сама поведінка в scripts/generate-product-pages.mjs.
+    if (!base) return '';
     const seen = counts.get(base) ?? 0;
     counts.set(base, seen + 1);
     if (seen > 0) console.warn(`slug: колізія "${base}" — застосовано суфікс -${seen + 1}`);
