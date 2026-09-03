@@ -64,10 +64,30 @@ function renderTabsShell(password: string): void {
         <button class="admin-tabs__btn" data-tab="orders" role="tab" type="button">Замовлення</button>
         <button class="admin-tabs__btn" data-tab="content" role="tab" type="button">Тексти</button>
       </div>
-      <button class="btn btn--outline btn--small" id="admin-logout" type="button">Вийти</button>
+      <div class="admin-toolbar__actions">
+        <button class="btn btn--outline btn--small" id="admin-rebuild" type="button">Оновити товари зараз</button>
+        <button class="btn btn--outline btn--small" id="admin-logout" type="button">Вийти</button>
+      </div>
     </div>
     <div id="admin-tab-content"></div>
   `;
+
+  document.getElementById('admin-rebuild')?.addEventListener('click', async () => {
+    const btn = document.getElementById('admin-rebuild') as HTMLButtonElement | null;
+    if (btn) btn.disabled = true;
+    try {
+      const result = await callApi('rebuildProducts', { password });
+      if (result.ok) {
+        showStatus('Оновлення запущено, зміни з’являться на сайті протягом кількох хвилин');
+      } else {
+        showStatus(result.error || 'Не вдалося запустити оновлення', true);
+      }
+    } catch {
+      showStatus('Не вдалося з’єднатися з сервером адмінки', true);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
 
   document.getElementById('admin-logout')?.addEventListener('click', () => {
     clearPassword();

@@ -13,6 +13,9 @@
  *    - ADMIN_PASSWORD — пароль для входу в /admin
  *    - BOT_TOKEN — токен Telegram-бота (від @BotFather)
  *    - CHAT_ID — chat_id, куди бот надсилає повідомлення про нові замовлення
+ *    - GITHUB_TOKEN — fine-grained Personal Access Token з правом "Actions: write" лише на цей
+ *      репозиторій (GitHub → Settings → Developer settings → Fine-grained tokens)
+ *    - GITHUB_REPO — "власник/репозиторій", напр. "IgorGnutov/tire_place"
  * 3. Deploy → New deployment → тип "Web app":
  *    - Execute as: Me
  *    - Who has access: Anyone
@@ -106,12 +109,49 @@ function doPost(e) {
     return jsonResponse(restoreOrder_(payload.orderId));
   }
 
+  if (action === 'rebuildProducts') {
+    if (!checkPassword_(payload.password)) {
+      return jsonResponse({ ok: false, error: 'Неправильний пароль' });
+    }
+    return jsonResponse(triggerRebuild_());
+  }
+
   return jsonResponse({ ok: false, error: 'Невідома дія' });
 }
 
 function checkPassword_(password) {
   var expected = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD');
   return !!expected && password === expected;
+}
+
+/**
+ * Запускає вже наявний workflow_dispatch у .github/workflows/deploy.yml через GitHub REST API —
+ * той самий job (npm run build + FTP-деплой), що інакше чекав би розкладу schedule.
+ */
+function triggerRebuild_() {
+  var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  var repo = PropertiesService.getScriptProperties().getProperty('GITHUB_REPO');
+  if (!token || !repo) {
+    return { ok: false, error: 'GITHUB_TOKEN або GITHUB_REPO не налаштовані в Script Properties' };
+  }
+
+  var url = 'https://api.github.com/repos/' + repo + '/actions/workflows/deploy.yml/dispatches';
+  var response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      Authorization: 'Bearer ' + token,
+      Accept: 'application/vnd.github+json',
+    },
+    payload: JSON.stringify({ ref: 'main' }),
+    muteHttpExceptions: true,
+  });
+
+  var code = response.getResponseCode();
+  if (code !== 204) {
+    return { ok: false, error: 'GitHub API повернув код ' + code + ': ' + response.getContentText() };
+  }
+  return { ok: true };
 }
 
 function saveContentValue_(key, html, lang) {

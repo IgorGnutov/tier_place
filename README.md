@@ -257,6 +257,26 @@ Apps Script), рядок у самій Google Таблиці не видаляє
 скріншотами з ним; якщо токен випадково "засвітився", перегенеруйте його через
 `@BotFather → /mybots → обрати бота → API Token → Revoke current token`.
 
+## Оновити товари поза розкладом
+
+Сторінки товару (`/tires/<slug>/`, `/wheels/<slug>/`) перегенеровуються автоматично при кожному
+пуші в `main` і кожні 6 годин за розкладом (GitHub Actions). Щоб не чекати — у `/admin` є кнопка
+**"Оновити товари зараз"**, яка запускає той самий деплой одразу.
+
+### Одноразове налаштування
+
+1. Створіть fine-grained Personal Access Token: GitHub → Settings → Developer settings →
+   Personal access tokens → Fine-grained tokens → New token. Обмежте його лише цим репозиторієм і
+   дайте право **Actions: Read and write**.
+2. У тому самому Apps Script (Project Settings → Script Properties), де вже є `ADMIN_PASSWORD`,
+   `BOT_TOKEN`, `CHAT_ID` — додайте:
+   - `GITHUB_TOKEN` — токен з кроку 1;
+   - `GITHUB_REPO` — `власник/репозиторій`, напр. `IgorGnutov/tire_place`.
+3. Deploy → Manage deployments → New version (URL лишається той самий).
+
+**Порада з безпеки:** токен дає лише право запускати Actions цього репозиторію (не читання/запис
+коду) — але все одно тримайте його в секреті так само, як `BOT_TOKEN`.
+
 ## Як додати товар чи послугу
 
 Просто додайте рядок у відповідну Google-таблицю з тими ж колонками — верстку й фільтри
