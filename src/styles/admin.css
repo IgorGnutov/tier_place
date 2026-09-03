@@ -320,3 +320,8 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
+
+.admin-toolbar__actions {
+  display: flex;
+  gap: var(--space-sm);
+}

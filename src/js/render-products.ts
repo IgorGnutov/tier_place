@@ -14,6 +14,7 @@ import {
 import { showToast } from './telegram';
 import { addItem } from './cart';
 import { t, onLangChange } from './i18n';
+import { dedupeSlugs, tireSlug, wheelSlug } from './slug';
 import {
   SHEET_TIRES_CSV,
   SHEET_WHEELS_CSV,
@@ -31,6 +32,8 @@ interface CardInfo {
   /** Стабільний ідентифікатор товару для кошика — повторне "Купити" на той самий товар
    *  збільшує кількість замість дублювання позиції. */
   key: string;
+  /** Абсолютний шлях на статичну сторінку товару, напр. "/tires/continental-.../" */
+  detailUrl: string;
   /** Короткий рядок розміру/характеристик для відображення в кошику. */
   sizeLine: string;
   /** string|null — з фото-блоком, null означає "фото поки немає" (показуємо плейсхолдер). */
@@ -69,6 +72,12 @@ function renderCard(info: CardInfo): HTMLElement {
   const card = document.createElement('article');
   card.className = 'product-card';
 
+  const link = document.createElement('a');
+  link.className = 'product-card__link';
+  // Без detailUrl (рядок таблиці без назви/розміру — сторінки товару для нього немає)
+  // лишаємо <a> без href: він не клікабельний і не веде в нікуди.
+  if (info.detailUrl) link.href = info.detailUrl;
+
   if (info.imageUrl !== undefined) {
     const photo = document.createElement('div');
     photo.className = 'product-card__photo';
@@ -87,13 +96,15 @@ function renderCard(info: CardInfo): HTMLElement {
     } else {
       photo.classList.add('product-card__photo--placeholder');
     }
-    card.appendChild(photo);
+    link.appendChild(photo);
   }
 
   const title = document.createElement('h3');
   title.className = 'product-card__title';
   title.textContent = info.title;
-  card.appendChild(title);
+  link.appendChild(title);
+
+  card.appendChild(link);
 
   const specs = document.createElement('ul');
   specs.className = 'product-card__specs';
@@ -161,6 +172,7 @@ function renderState(container: HTMLElement, message: string, isError: boolean, 
 
 async function initCatalog(config: CatalogConfig): Promise<void> {
   const { idPrefix, fields } = config;
+  if (!el(`${idPrefix}-grid`)) return; // сторінка без каталогу (напр. сторінка товару) — це нормально, не помилка
   let grid: HTMLElement, countEl: HTMLElement, sortEl: HTMLSelectElement, chipsEl: HTMLElement, form: HTMLFormElement;
   try {
     grid = requireEl<HTMLElement>(`${idPrefix}-grid`);
@@ -198,6 +210,12 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   }
 
   const rows = result.rows;
+  const slugOf = idPrefix === 'tires' ? tireSlug : wheelSlug;
+  dedupeSlugs(rows, slugOf).forEach((slug, i) => {
+    // Порожній slug — статичної сторінки для такого рядка білд не згенерував, тож картка
+    // лишається без посилання (див. renderCard).
+    rows[i].__detailUrl = slug ? `/${idPrefix}/${slug}/` : '';
+  });
   let state: FilterState = readStateFromUrl(idPrefix, fields);
   const range = readRangeFromUrl(idPrefix);
   let visibleCount = PAGE_SIZE;
@@ -347,6 +365,7 @@ function tiresDescribe(row: CsvRow): CardInfo {
     price,
     inStock: parseBool(row.in_stock),
     key: `tires:${title}:${size}`,
+    detailUrl: row.__detailUrl ?? '',
     sizeLine: size,
     imageUrl: row.image_url?.trim() || null,
   };
@@ -368,6 +387,7 @@ function wheelsDescribe(row: CsvRow): CardInfo {
     price,
     inStock: parseBool(row.in_stock),
     key: `wheels:${title}:${size}`,
+    detailUrl: row.__detailUrl ?? '',
     sizeLine: size,
     imageUrl: row.image_url?.trim() || null,
   };
@@ -445,4 +465,26 @@ export function initCatalogTabs(): void {
   });
 
   if (window.location.hash === '#wheels') activate('wheels');
+}
+
+/** Кнопка "Купити" на статичній сторінці товару (generate-product-pages.mjs). No-op на будь-якій
+ *  іншій сторінці, де #product-data/#product-buy-btn відсутні — картка каталогу має свою окрему
+ *  логіку в renderCard(). */
+export function initProductBuyButton(): void {
+  const dataEl = document.getElementById('product-data');
+  const buyBtn = document.getElementById('product-buy-btn') as HTMLButtonElement | null;
+  if (!dataEl || !buyBtn) return;
+
+  let product: { key: string; title: string; sizeLine: string; price: number | null };
+  try {
+    product = JSON.parse(dataEl.textContent ?? '{}');
+  } catch {
+    return;
+  }
+
+  buyBtn.addEventListener('click', () => {
+    if (buyBtn.disabled) return;
+    addItem({ key: product.key, title: product.title, sizeLine: product.sizeLine, price: product.price });
+    showToast(t('product.addedToCart', 'Додано в кошик'));
+  });
 }

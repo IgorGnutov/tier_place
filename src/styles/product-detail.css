@@ -1,0 +1,77 @@
+/* Сторінка товару (шини/диски) — розмітку генерує scripts/generate-product-pages.mjs під час білда. */
+.product-detail {
+  padding: var(--space-xl) 0;
+}
+
+.product-detail__back {
+  display: inline-block;
+  margin-bottom: var(--space-md);
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.product-detail__back:hover {
+  color: var(--color-accent);
+}
+
+.product-detail__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-lg);
+}
+
+@media (min-width: 768px) {
+  .product-detail__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.product-detail__photo {
+  background: var(--color-bg-raised);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-detail__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-detail__photo--placeholder {
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.product-detail__title {
+  font-family: var(--font-heading);
+  font-size: var(--fs-h2);
+  margin: 0 0 var(--space-sm);
+}
+
+.product-detail__specs {
+  list-style: none;
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  display: grid;
+  gap: var(--space-xs);
+  color: var(--color-text-muted);
+}
+
+.product-detail__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.product-detail__price {
+  font-family: var(--font-heading);
+  font-size: var(--fs-h3);
+  color: var(--color-accent);
+}

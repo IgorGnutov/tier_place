@@ -14,7 +14,7 @@ comments, commit-facing docs, and UI copy is Ukrainian — match that when editi
 ```bash
 npm install
 npm run dev             # Vite dev server
-npm run build           # build to dist/
+npm run build           # vite build → scripts/generate-ru-html.mjs → scripts/generate-product-pages.mjs
 npm run preview         # preview built dist/
 npm run typecheck       # tsc --noEmit
 npm run optimize:photos # scripts/optimize-photos.mjs — generate AVIF/WebP/JPEG at 480/768/1200/1920px
@@ -27,7 +27,10 @@ There is no linter configured either.
 
 **Data flow (Google Sheets → CSV → render):**
 - `src/config.ts` is the single place for Google Sheet URLs, contact info, and cache TTL. An empty
-  `SHEET_*_CSV` string means "use only the local demo CSV" (see `sheetCsvUrl()`).
+  `SHEET_*_CSV` string means "use only the local demo CSV" (see `sheetCsvUrl()`). The raw
+  `spreadsheetId`/`gids` live in `src/data/sheet-ids.json`; `config.ts` imports that JSON and builds
+  the export URLs from it, so `scripts/generate-product-pages.mjs` (plain Node, can't import `.ts`)
+  can read the same IDs. Edit the IDs in the JSON, everything else in `config.ts`.
 - `src/js/sheets.ts` (`loadCsv`) fetches the sheet CSV, caching successful parses in
   `sessionStorage` for `SHEET_CACHE_TTL_MS` (5 min). On any failure — network error, HTTP error, or
   Google returning an HTML login page (public sharing not enabled) — its default behavior falls back
@@ -75,6 +78,38 @@ There is no linter configured either.
   order to a Telegram bot chat — see `README.md`, "Кошик і замовлення", for the bot setup steps
   and the sheet's exact column contract.
 
+**Product detail pages (`/tires/<slug>/`, `/wheels/<slug>/`) — generated at build time, not
+client-rendered:**
+- `scripts/generate-product-pages.mjs` runs last in `npm run build`. It fetches the same tires/wheels
+  sheet CSVs the browser does, then for every row clones the already-built `dist/index.html`, swaps
+  the inside of `<main id="main">` for that product's markup, patches the `<head>` SEO tags, and
+  writes `dist/<kind>/<slug>/index.html` — the same clone-and-patch technique
+  `scripts/generate-ru-html.mjs` uses for `/ru/`. It also appends one `<url>` per product to
+  `dist/sitemap.xml`. There is no dev preview of these pages (`npm run dev` won't show them), same
+  as for `/ru/`.
+- A fetch failure (network, HTTP error, or Google returning its HTML login page instead of CSV) is
+  **fatal** — the script exits non-zero before writing anything. This is deliberate: the deploy
+  action delete-syncs `dist/` onto the server, so a "successful" build with zero product pages would
+  wipe every already-published product page off the live site. An empty-but-reachable sheet (0 rows)
+  is a legitimate non-fatal case and does exactly that, by design.
+- The generated pages load the shared, unmodified `main.js`, which mutates `<head>` on startup:
+  `i18n.ts`'s `updateHeadForLang()` rewrites `#canonical-link`/`#og-url-meta` to the homepage URL,
+  and `applyStaticTranslations()` overwrites anything carrying `data-i18n`/`data-i18n-attr`. The
+  generator therefore *strips* those hooks (`id="canonical-link"`, `id="og-url-meta"`,
+  `data-i18n-attr="content:meta.*"`, `data-lang-link`) so the build-time tags survive in the rendered
+  DOM Google indexes. If you add a new `<head>` tag that `main.js` touches by id or `data-i18n*`,
+  strip it there too — and verify in the rendered DOM (DevTools/Playwright), never in view-source.
+  For the same reason nav anchors get rewritten from `href="#tires"` to `href="/#tires"`: a bare hash
+  points at homepage sections that don't exist here, and `initCatalogTabs`'s
+  `a[data-nav-link][href="#wheels"]` handler would otherwise swallow the click.
+- **Slug formula and CSV-row→title/specs mapping are duplicated on purpose.** `src/js/slug.ts`
+  (client, links the catalog cards) and the plain-JS copies inside `generate-product-pages.mjs`
+  (Node 20 in CI cannot import `.ts`, and adding a transpiler for one script isn't worth it) must
+  stay identical — same as the sheet-column-name sync obligation below. Changing the slug parts, the
+  transliteration table, or `describeTire`/`describeWheel` vs `tiresDescribe`/`wheelsDescribe` in one
+  place *requires* the same edit in the other, or catalog cards will link to URLs that were never
+  generated.
+
 **Static asset handling — why `public/` matters here:**
 Vite only auto-copies assets it can statically discover (`<img src>`, `import`). The hero slider
 (`src/js/hero-slider.ts`) builds image paths at runtime as strings (`` `${base}-${width}.${ext}` ``
@@ -86,6 +121,7 @@ new dynamically-referenced files, put them in `public/`.
 The first slide in `src/data/gallery.ts` is the LCP image and is duplicated as a real, eager
 `<img>` in `index.html` (plus a `<link rel="preload">` in `<head>`) for fast first paint. If you
 reorder slides so a different photo becomes first, update both of those `index.html` spots to match.
+(Product detail pages have no hero, so the generator drops that preload `<link>` from its clones.)
 
 **Other modules:** `nav.ts` (burger menu, active-link highlighting, header shadow on scroll),
 `hero-slider.ts` (vanilla crossfade slider — autoplay, swipe, ARIA), `map.ts` (lazy-inserts the

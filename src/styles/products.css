@@ -275,3 +275,10 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* Обгортка фото+назви картки посиланням на сторінку товару — не повинна ламати існуючий layout. */
+.product-card__link {
+  display: contents;
+  color: inherit;
+  text-decoration: none;
+}
