@@ -14,6 +14,7 @@ import {
 import { showToast } from './telegram';
 import { addItem } from './cart';
 import { t, onLangChange } from './i18n';
+import { dedupeSlugs, tireSlug, wheelSlug } from './slug';
 import {
   SHEET_TIRES_CSV,
   SHEET_WHEELS_CSV,
@@ -31,6 +32,8 @@ interface CardInfo {
   /** Стабільний ідентифікатор товару для кошика — повторне "Купити" на той самий товар
    *  збільшує кількість замість дублювання позиції. */
   key: string;
+  /** Абсолютний шлях на статичну сторінку товару, напр. "/tires/continental-.../" */
+  detailUrl: string;
   /** Короткий рядок розміру/характеристик для відображення в кошику. */
   sizeLine: string;
   /** string|null — з фото-блоком, null означає "фото поки немає" (показуємо плейсхолдер). */
@@ -69,6 +72,10 @@ function renderCard(info: CardInfo): HTMLElement {
   const card = document.createElement('article');
   card.className = 'product-card';
 
+  const link = document.createElement('a');
+  link.className = 'product-card__link';
+  link.href = info.detailUrl;
+
   if (info.imageUrl !== undefined) {
     const photo = document.createElement('div');
     photo.className = 'product-card__photo';
@@ -87,13 +94,15 @@ function renderCard(info: CardInfo): HTMLElement {
     } else {
       photo.classList.add('product-card__photo--placeholder');
     }
-    card.appendChild(photo);
+    link.appendChild(photo);
   }
 
   const title = document.createElement('h3');
   title.className = 'product-card__title';
   title.textContent = info.title;
-  card.appendChild(title);
+  link.appendChild(title);
+
+  card.appendChild(link);
 
   const specs = document.createElement('ul');
   specs.className = 'product-card__specs';
@@ -198,6 +207,10 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   }
 
   const rows = result.rows;
+  const slugOf = idPrefix === 'tires' ? tireSlug : wheelSlug;
+  dedupeSlugs(rows, slugOf).forEach((slug, i) => {
+    rows[i].__detailUrl = `/${idPrefix}/${slug}/`;
+  });
   let state: FilterState = readStateFromUrl(idPrefix, fields);
   const range = readRangeFromUrl(idPrefix);
   let visibleCount = PAGE_SIZE;
@@ -347,6 +360,7 @@ function tiresDescribe(row: CsvRow): CardInfo {
     price,
     inStock: parseBool(row.in_stock),
     key: `tires:${title}:${size}`,
+    detailUrl: row.__detailUrl ?? '',
     sizeLine: size,
     imageUrl: row.image_url?.trim() || null,
   };
@@ -368,6 +382,7 @@ function wheelsDescribe(row: CsvRow): CardInfo {
     price,
     inStock: parseBool(row.in_stock),
     key: `wheels:${title}:${size}`,
+    detailUrl: row.__detailUrl ?? '',
     sizeLine: size,
     imageUrl: row.image_url?.trim() || null,
   };
