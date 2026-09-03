@@ -132,6 +132,32 @@
 але решта сайту (включно з клієнтським каталогом, що фетчить дані самостійно в браузері)
 білдиться і деплоїться штатно.
 
+### 8.1. Ручний запуск оновлення з адмінки
+
+Окрім розкладу, власник має можливість запустити оновлення одразу, не чекаючи
+наступного вікна `schedule`:
+
+- У тулбарі `/admin` (`src/admin/main.ts`, поруч із кнопкою "Вийти") — нова кнопка
+  "Оновити товари зараз".
+- Клік викликає `callApi('rebuildProducts', { password })` — той самий Apps Script Web
+  App (`admin/apps-script/Code.gs`), що вже обробляє `save`/`listOrders`/`order`.
+- У `Code.gs`: нова дія в `doPost` — перевірка пароля через існуючий `checkPassword_`,
+  далі `UrlFetchApp.fetch` на GitHub REST API
+  (`POST /repos/<owner>/<repo>/actions/workflows/deploy.yml/dispatches`, body
+  `{"ref":"main"}`), що запускає вже наявний у `deploy.yml` тригер `workflow_dispatch`
+  — тобто той самий job (`npm run build` + FTP-деплой), не чекаючи `schedule`.
+- Токен для GitHub API — новий Script Property `GITHUB_TOKEN` (fine-grained PAT,
+  права лише "Actions: write" на цей репозиторій), за тим самим принципом, що вже
+  застосований для `BOT_TOKEN`/`CHAT_ID` — секрет живе тільки на сервері Apps Script,
+  у браузер не потрапляє.
+- Відповідь адмінці — просто підтвердження запуску ("Оновлення запущено, зміни
+  з'являться на сайті протягом кількох хвилин"), без опитування статусу білда: це
+  зайва складність, не потрібна для цієї задачі (прогрес видно й так — на самому сайті
+  або в GitHub Actions).
+- Дублікати запуску не шкодять: `deploy.yml` вже має
+  `concurrency: { group: deploy, cancel-in-progress: true }` — повторний клік просто
+  скасовує попередній запуск і стартує новий.
+
 ### 9. Інтеграція з каталогом
 
 `renderCard()` у `render-products.ts` обгортає картку/заголовок у `<a
@@ -147,7 +173,10 @@ href="/tires/<slug>/">` (або `/wheels/<slug>/`), використовуючи
 - **Змінюються:** `src/config.ts` (читає `sheet-ids.json`), `index.html` (маркери
   header/cart-drawer/footer), `render-products.ts` (посилання на картці, спільна
   slug-функція), `package.json` (крок білда), `.github/workflows/deploy.yml`
-  (`schedule` тригер), `public/sitemap.xml`-логіка (генерується поверх у `dist/`).
+  (`schedule` тригер, `workflow_dispatch` вже наявний), `public/sitemap.xml`-логіка
+  (генерується поверх у `dist/`), `admin/apps-script/Code.gs` (нова дія
+  `rebuildProducts` + Script Property `GITHUB_TOKEN`), `src/admin/main.ts`/`api.ts`
+  (кнопка "Оновити товари зараз" у тулбарі).
 
 ## Тестування/перевірка
 
@@ -161,6 +190,9 @@ href="/tires/<slug>/">` (або `/wheels/<slug>/`), використовуючи
   мета-теги валідні.
 - Відомий пробіл: `npm run dev` не показує сторінки товару (немає dev-прев'ю), як і
   зараз немає dev-прев'ю для `/ru/` — це наявне обмеження проєкту, не регрес.
+- Кнопку "Оновити товари зараз" перевірити вручну: клік у `/admin` реально запускає
+  новий run у GitHub Actions (вкладка Actions репозиторію), і після його завершення
+  сторінки товарів у `dist`/на сайті оновлені.
 
 ## Явно поза межами цього дизайну
 
