@@ -262,6 +262,20 @@ async function loadProducts() {
   ];
 }
 
+function writeSitemap(products, root) {
+  const today = new Date().toISOString().slice(0, 10);
+  const sitemapPath = `${root}/dist/sitemap.xml`;
+  const base = readFileSync(sitemapPath, 'utf8');
+  const productEntries = products
+    .map(
+      (p) =>
+        `  <url>\n    <loc>https://tire-place.com.ua/${p.kind}/${p.slug}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`
+    )
+    .join('\n');
+  const xml = base.replace('</urlset>', `${productEntries}\n</urlset>`);
+  writeFileSync(sitemapPath, xml);
+}
+
 async function main() {
   const products = await loadProducts();
   if (products.length === 0) {
@@ -274,6 +288,7 @@ async function main() {
     const html = buildProductPage(product, baseHtml);
     writeProductPage(product, html, root);
   }
+  writeSitemap(products, root);
   console.log(`generate-product-pages: згенеровано ${products.length} сторінок товару.`);
 }
 
