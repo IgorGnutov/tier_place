@@ -22,6 +22,12 @@ async function fetchCsvRows(url) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const text = await res.text();
   const clean = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  // Google на помилку доступу віддає HTML-сторінку логіну/шарингу зі статусом 200 — без цієї
+  // перевірки Papa Parse розібрав би її як "рядки товарів" і ми б згенерували сміттєві сторінки.
+  // Той самий захист уже є на клієнті (src/js/sheets.ts).
+  if (/^\s*<(!doctype html|html)/i.test(clean)) {
+    throw new Error('таблиця недоступна — Google повернув HTML замість CSV (перевірте доступ "за посиланням")');
+  }
   const parsed = Papa.parse(clean, {
     header: true,
     skipEmptyLines: true,
@@ -71,6 +77,9 @@ function dedupeSlugs(rows, slugOf) {
   const counts = new Map();
   return rows.map((row) => {
     const base = slugOf(row);
+    // Порожній slug (усі колонки-ідентифікатори порожні) — не URL: повертаємо '', викликач
+    // такий рядок пропускає. Та сама поведінка в src/js/slug.ts.
+    if (!base) return '';
     const seen = counts.get(base) ?? 0;
     counts.set(base, seen + 1);
     if (seen > 0) console.warn(`generate-product-pages: колізія slug "${base}" — застосовано суфікс -${seen + 1}`);
@@ -86,10 +95,47 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/"/g, '&quot;');
 }
 
+/** Значення підставляється функцією-замінником, а не рядком: у рядку-заміні `$&`, `` $` ``, `$'`,
+ *  `$1` мають спеціальне значення, тож назва товару з `$&` зіпсувала б результат. */
 function replaceAttr(source, matchPrefix, value) {
   const re = new RegExp(`(${matchPrefix})[^"]*(")`);
   if (!re.test(source)) throw new Error(`generate-product-pages: pattern not found — ${matchPrefix}`);
-  return source.replace(re, `$1${escapeAttr(value)}$2`);
+  const escaped = escapeAttr(value);
+  return source.replace(re, (_match, before, after) => `${before}${escaped}${after}`);
+}
+
+/** Обов'язкове видалення фрагмента: якщо шаблон не знайдено — це дрейф index.html, і краще
+ *  впасти на білді, ніж мовчки залишити на сторінці товару чужий тег. */
+function removeAll(source, re, label) {
+  if (!re.test(source)) throw new Error(`generate-product-pages: не знайдено для видалення — ${label}`);
+  re.lastIndex = 0;
+  return source.replace(re, '');
+}
+
+// Один блок JSON-LD разом із коментарем-заголовком перед ним (у head вони йдуть саме так).
+const JSON_LD_BLOCK_RE = /[ \t]*(?:<!--[^\r\n]*-->[ \t]*\r?\n[ \t]*)?<script type="application\/ld\+json">[\s\S]*?<\/script>[ \t]*\r?\n?/g;
+
+/** Прибирає JSON-LD блоки з переліченими @type. Google очікує, що розмічений контент реально
+ *  присутній на сторінці — Service/FAQPage/BreadcrumbList головної на сторінці товару зайві. */
+function removeJsonLd(html, types) {
+  const removed = new Set();
+  const out = html.replace(JSON_LD_BLOCK_RE, (block) => {
+    const match = /"@type"\s*:\s*"([^"]+)"/.exec(block);
+    if (match && types.includes(match[1])) {
+      removed.add(match[1]);
+      return '';
+    }
+    return block;
+  });
+  for (const type of types) {
+    if (!removed.has(type)) throw new Error(`generate-product-pages: JSON-LD блок "${type}" не знайдено в dist/index.html`);
+  }
+  return out;
+}
+
+/** `<` екранується, щоб рядок із таблиці (напр. "</script>") не міг закрити наш <script>. */
+function jsonForScript(value) {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
 function replaceMain(html, mainInnerHtml) {
@@ -109,7 +155,7 @@ function buildMainHtml(product) {
   const statusText = product.inStock ? 'В наявності' : 'Немає в наявності';
   const priceText = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'Ціна за запитом';
   const backHref = product.kind === 'tires' ? '/#tires' : '/#wheels';
-  const productData = JSON.stringify({ key: product.key, title: product.title, sizeLine: product.size, price: product.price });
+  const productData = jsonForScript({ key: product.key, title: product.title, sizeLine: product.size, price: product.price });
 
   return `
     <div class="container product-detail">
@@ -141,7 +187,7 @@ function buildProductPage(product, baseHtml) {
 
   let html = baseHtml;
   html = replaceMain(html, buildMainHtml(product));
-  html = html.replace(/<title data-i18n="meta\.title">[^<]*<\/title>/, `<title data-i18n="meta.title">${escapeHtml(metaTitle)}</title>`);
+  html = html.replace(/<title[^>]*>[^<]*<\/title>/, () => `<title>${escapeHtml(metaTitle)}</title>`);
   html = replaceAttr(html, '<meta name="description"[^>]*content="', metaDescription);
   html = replaceAttr(html, '<link rel="canonical" id="canonical-link" href="', pageUrl);
   html = replaceAttr(html, '<meta property="og:title" content="', metaTitle);
@@ -152,12 +198,38 @@ function buildProductPage(product, baseHtml) {
   if (product.imageUrl) {
     html = replaceAttr(html, '<meta property="og:image" content="', product.imageUrl);
     html = replaceAttr(html, '<meta name="twitter:image" content="', product.imageUrl);
+    // Розміри 1200×900 стосувались фото вивіски з головної — до фото товару вони не підходять.
+    html = removeAll(html, /[ \t]*<meta property="og:image:(?:width|height)" content="\d+" \/>[ \t]*\r?\n?/g, 'og:image:width/height');
   }
+
+  // main.js (i18n.ts) під час старту перезаписує #canonical-link/#og-url-meta на URL головної,
+  // а applyStaticTranslations() — усі теги з data-i18n/data-i18n-attr="content:meta.*" на
+  // RU-рядки головної. Обидва пошуки мають нічого не знайти на сторінці товару, інакше
+  // побудовані тут SEO-теги зникають одразу після виконання JS (у DOM, який індексує Google).
+  html = removeAll(html, / id="canonical-link"/g, 'id="canonical-link"');
+  html = removeAll(html, / id="og-url-meta"/g, 'id="og-url-meta"');
+  html = removeAll(html, / data-i18n-attr="content:meta\.[A-Za-z]+"/g, 'data-i18n-attr="content:meta.*"');
+  // Перемикач мови: без data-lang-link клік — звичайний перехід за href ("/" або "/ru/"),
+  // а не JS-підміна контенту поточної сторінки. RU-версії сторінки товару немає.
+  html = removeAll(html, / data-lang-link="(?:uk|ru)"/g, 'data-lang-link');
+  html = html.replace('<a href="/" class="lang-switch__link"', () => '<a href="/" class="lang-switch__link is-active"');
 
   // Немає RU-версії сторінки товару (поза межами цієї задачі) — прибираємо hreflang-альтернативи
   // й og:locale:alternate, щоб не посилатись на неіснуючу сторінку.
   html = html.replace(/\s*<link rel="alternate" hreflang="[^"]*" href="[^"]*"\s*\/>/g, '');
   html = html.replace(/\s*<meta property="og:locale:alternate" content="ru_RU"\s*\/>/, '');
+
+  // Preload LCP-фото hero-слайдера: hero на сторінці товару немає (<main> замінено) — це був би
+  // зайвий високопріоритетний запит, що конкурує з фото самого товару.
+  html = removeAll(
+    html,
+    /[ \t]*(?:<!--[^\n]*-->[ \t]*\r?\n[ \t]*)?<link\r?\n[ \t]*rel="preload"[\s\S]*?\/>\r?\n?/g,
+    '<link rel="preload" as="image">'
+  );
+
+  // Service/FAQPage/BreadcrumbList головної описують контент, якого на цій сторінці немає.
+  // AutoPartsStore лишається — це загальносайтова інформація про бізнес.
+  html = removeJsonLd(html, ['Service', 'FAQPage', 'BreadcrumbList']);
 
   const productJsonLd = {
     '@context': 'https://schema.org',
@@ -173,7 +245,26 @@ function buildProductPage(product, baseHtml) {
       url: pageUrl,
     },
   };
-  html = html.replace('</head>', `  <script type="application/ld+json">${JSON.stringify(productJsonLd)}</script>\n</head>`);
+  const catalogName = product.kind === 'tires' ? 'Шини' : 'Диски';
+  const catalogUrl = `https://tire-place.com.ua/${product.kind === 'tires' ? '#tires' : '#wheels'}`;
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Головна', item: 'https://tire-place.com.ua/' },
+      { '@type': 'ListItem', position: 2, name: catalogName, item: catalogUrl },
+      { '@type': 'ListItem', position: 3, name: product.title, item: pageUrl },
+    ],
+  };
+  const headScripts =
+    `  <script type="application/ld+json">${jsonForScript(productJsonLd)}</script>\n` +
+    `  <script type="application/ld+json">${jsonForScript(breadcrumbJsonLd)}</script>\n</head>`;
+  html = html.replace('</head>', () => headScripts);
+
+  // Пункти меню/футера ведуть на секції головної — на сторінці товару голий хеш (#tires) нікуди
+  // не веде. Кореневий /#tires працює звідусіль; заодно селектор a[data-nav-link][href="#wheels"]
+  // з render-products.ts перестає збігатись, тож його preventDefault більше не перехоплює клік.
+  html = html.replace(/href="#([a-z-]+)" data-nav-link/g, 'href="/#$1" data-nav-link');
 
   // Сторінка лежить на 2 рівні глибше dist/index.html — переписуємо відносні шляхи на кореневі
   // (той самий прийом, що вже застосований у generate-ru-html.mjs для /ru/; кореневий шлях
@@ -240,26 +331,39 @@ async function loadProducts() {
   const tiresUrl = sheetCsvUrl(sheetIds.spreadsheetId, sheetIds.gids.tires);
   const wheelsUrl = sheetCsvUrl(sheetIds.spreadsheetId, sheetIds.gids.wheels);
 
+  // Помилка фетчу і "таблиця порожня, але доступна" — різні речі: перше має завалити білд
+  // (див. main()), друге лишається валідним станом. Тому збираємо помилки окремо від рядків.
+  const errors = [];
   let tireRows = [];
   let wheelRows = [];
   try {
     tireRows = await fetchCsvRows(tiresUrl);
   } catch (err) {
-    console.warn(`generate-product-pages: не вдалося завантажити шини — ${err.message}`);
+    errors.push(`шини — ${err.message}`);
   }
   try {
     wheelRows = await fetchCsvRows(wheelsUrl);
   } catch (err) {
-    console.warn(`generate-product-pages: не вдалося завантажити диски — ${err.message}`);
+    errors.push(`диски — ${err.message}`);
   }
 
   const tireSlugs = dedupeSlugs(tireRows, tireSlug);
   const wheelSlugs = dedupeSlugs(wheelRows, wheelSlug);
 
-  return [
+  const products = [
     ...tireRows.map((row, i) => ({ ...describeTire(row), kind: 'tires', slug: tireSlugs[i] })),
     ...wheelRows.map((row, i) => ({ ...describeWheel(row), kind: 'wheels', slug: wheelSlugs[i] })),
-  ];
+  ].filter((product) => {
+    // Порожній slug = усі колонки-ідентифікатори рядка порожні. Такий товар дав би URL
+    // "/tires//" і перезаписав би dist/tires/index.html — пропускаємо повністю.
+    if (!product.slug) {
+      console.warn(`generate-product-pages: пропущено рядок без назви/розміру ("${product.title}") — порожній slug.`);
+      return false;
+    }
+    return true;
+  });
+
+  return { products, errors };
 }
 
 function writeSitemap(products, root) {
@@ -277,9 +381,19 @@ function writeSitemap(products, root) {
 }
 
 async function main() {
-  const products = await loadProducts();
+  const { products, errors } = await loadProducts();
+
+  // Деплой (SamKirkland/FTP-Deploy-Action) синхронізує dist/ з видаленням зайвого на сервері:
+  // "успішний" білд без сторінок товару стер би з живого сайту всі вже опубліковані сторінки.
+  // Тому будь-яка помилка завантаження таблиці — фатальна, і саме ДО запису будь-яких файлів:
+  // білд падає, деплой не запускається, на сервері лишається попередня робоча версія.
+  if (errors.length > 0) {
+    throw new Error(`не вдалося завантажити дані таблиці (${errors.join('; ')}) — білд зупинено, щоб деплой не стер уже опубліковані сторінки товару.`);
+  }
+
   if (products.length === 0) {
-    console.log('generate-product-pages: немає товарів для генерації сторінок (порожні або недоступні таблиці).');
+    // Порожня, але доступна таблиця — валідний стан (так само трактує це клієнтський loadCsv).
+    console.log('generate-product-pages: немає товарів для генерації сторінок (таблиці доступні, але порожні).');
     return;
   }
 
@@ -292,4 +406,7 @@ async function main() {
   console.log(`generate-product-pages: згенеровано ${products.length} сторінок товару.`);
 }
 
-main();
+main().catch((err) => {
+  console.error(`generate-product-pages: ${err.message}`);
+  process.exit(1);
+});
