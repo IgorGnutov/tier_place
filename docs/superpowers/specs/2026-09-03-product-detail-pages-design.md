@@ -69,24 +69,30 @@
 
 ### 3. Побудова HTML сторінки товару
 
-- В `index.html` додаються HTML-коментарі-маркери навколо header (з навігацією й
-  іконкою кошика), розмітки cart-drawer і footer, напр. `<!-- SITE_HEADER_START -->`
-  / `<!-- SITE_HEADER_END -->` і аналогічно для cart-drawer/footer.
-- `generate-product-pages.mjs` читає вже зібраний `dist/index.html`, вирізає ці три
-  блоки (header, cart-drawer, footer) і блок `<script type="module" src="...">` в
-  кінці `<body>` — і складає з них новий каркас, спільний для всіх сторінок товару.
-- Для кожного товару в цей каркас вставляється `<main>` з: фото (або плейсхолдер),
-  назвою, списком характеристик, ціною, статусом наявності, кнопкою "Купити" і
-  посиланням "← Назад до каталогу" (`/#tires` або `/#wheels`).
-- Оскільки сторінка лежить на рівень глибше (`dist/tires/<slug>/index.html`), усі
-  відносні шляхи (`./assets/...`) переписуються на кореневі (`/assets/...`) — той
-  самий прийом, що вже застосований у `generate-ru-html.mjs` для `/ru/`.
-- Той самий бандл `main.js`/`main.css`, що й на головній сторінці, підключається без
-  змін — окремого Vite-entry для сторінки товару не потрібно. `initCatalogs()` та інші
-  `init*()`-функції з `main.ts` мають безпечно ігнорувати відсутні на цій сторінці DOM-вузли
-  (каталог, hero-slider, карта) — `initCatalogs`/`render-products.ts` вже так поводиться
-  (try/catch навколо `requireEl`); інші модулі (`hero-slider.ts`, `map.ts`, `content.ts`)
-  будуть перевірені й, де потрібно, захищені аналогічно на етапі імплементації.
+- Перевірено фактичну структуру `index.html`: увесь контент домашньої сторінки лежить
+  в одному `<main id="main">…</main>`, а розмітка кошика-дравера в статичному HTML
+  відсутня взагалі — `initCart()` (`src/js/cart-ui.ts`) створює її в DOM сама. Тобто
+  окремі маркери для header/cart-drawer/footer не потрібні: header і footer вже й так
+  лежать поза `<main>`.
+- `generate-product-pages.mjs` бере вже зібраний `dist/index.html` **цілком**
+  (як `generate-ru-html.mjs` бере його для `/ru/`) і замінює лише вміст між
+  `<main id="main">` і `</main>` на розмітку конкретного товару: фото (або
+  плейсхолдер), назва, список характеристик, ціна, статус наявності, кнопка "Купити"
+  і посилання "← Назад до каталогу" (`/#tires` або `/#wheels`). Усе інше — header,
+  футер, `#toast`, `#floating-telegram`, підключення `main.js`/`main.css` — переноситься
+  як є, без змін.
+- Оскільки сторінка лежить на два рівні глибше (`dist/tires/<slug>/index.html`), усі
+  відносні шляхи (`./assets/...`) переписуються на кореневі (`/assets/...`) — той самий
+  прийом, що вже застосований у `generate-ru-html.mjs` для `/ru/` (і працює однаково на
+  будь-якій глибині, бо кореневий шлях не залежить від глибини поточної сторінки).
+- Той самий бандл `main.js`/`main.css` підключається без змін — окремого Vite-entry для
+  сторінки товару не потрібно. Перевірено код `initCatalogs`/`render-products.ts`
+  (try/catch навколо `requireEl`), `hero-slider.ts` (`if (!root || !track || !dotsWrap)
+  return`), `map.ts` (опціональні виклики через `?.`), `nav.ts` (порожній
+  `querySelectorAll`/`forEach` — безпечно), `content.ts` (порожній `querySelectorAll`) —
+  усі вже безпечно ігнорують відсутні на сторінці товару DOM-вузли (каталог,
+  hero-slider, карта, `[data-content-key]`). Змін коду в цих модулях не потрібно;
+  залишається лише візуально перевірити консоль браузера на згенерованій сторінці.
 
 ### 4. SEO-теги й структуровані дані
 
@@ -170,9 +176,9 @@ href="/tires/<slug>/">` (або `/wheels/<slug>/`), використовуючи
 
 - **Нові:** `src/data/sheet-ids.json`, `scripts/generate-product-pages.mjs`,
   можливо `src/styles/product-detail.css` (підключається в `src/styles/main.css`).
-- **Змінюються:** `src/config.ts` (читає `sheet-ids.json`), `index.html` (маркери
-  header/cart-drawer/footer), `render-products.ts` (посилання на картці, спільна
-  slug-функція), `package.json` (крок білда), `.github/workflows/deploy.yml`
+- **Змінюються:** `src/config.ts` (читає `sheet-ids.json`), `render-products.ts`
+  (посилання на картці, спільна slug-функція), `package.json` (крок білда),
+  `.github/workflows/deploy.yml`
   (`schedule` тригер, `workflow_dispatch` вже наявний), `public/sitemap.xml`-логіка
   (генерується поверх у `dist/`), `admin/apps-script/Code.gs` (нова дія
   `rebuildProducts` + Script Property `GITHUB_TOKEN`), `src/admin/main.ts`/`api.ts`
