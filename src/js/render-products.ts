@@ -461,3 +461,25 @@ export function initCatalogTabs(): void {
 
   if (window.location.hash === '#wheels') activate('wheels');
 }
+
+/** Кнопка "Купити" на статичній сторінці товару (generate-product-pages.mjs). No-op на будь-якій
+ *  іншій сторінці, де #product-data/#product-buy-btn відсутні — картка каталогу має свою окрему
+ *  логіку в renderCard(). */
+export function initProductBuyButton(): void {
+  const dataEl = document.getElementById('product-data');
+  const buyBtn = document.getElementById('product-buy-btn') as HTMLButtonElement | null;
+  if (!dataEl || !buyBtn) return;
+
+  let product: { key: string; title: string; sizeLine: string; price: number | null };
+  try {
+    product = JSON.parse(dataEl.textContent ?? '{}');
+  } catch {
+    return;
+  }
+
+  buyBtn.addEventListener('click', () => {
+    if (buyBtn.disabled) return;
+    addItem({ key: product.key, title: product.title, sizeLine: product.sizeLine, price: product.price });
+    showToast(t('product.addedToCart', 'Додано в кошик'));
+  });
+}
