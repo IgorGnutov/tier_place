@@ -170,6 +170,7 @@ function renderState(container: HTMLElement, message: string, isError: boolean, 
 
 async function initCatalog(config: CatalogConfig): Promise<void> {
   const { idPrefix, fields } = config;
+  if (!el(`${idPrefix}-grid`)) return; // сторінка без каталогу (напр. сторінка товару) — це нормально, не помилка
   let grid: HTMLElement, countEl: HTMLElement, sortEl: HTMLSelectElement, chipsEl: HTMLElement, form: HTMLFormElement;
   try {
     grid = requireEl<HTMLElement>(`${idPrefix}-grid`);
