@@ -51,40 +51,40 @@ async function fetchAndParseSheet(url: string): Promise<CsvRow[]> {
   return rows;
 }
 
+async function fetchSheetCached(sheetUrl: string): Promise<LoadResult> {
+  const cacheKey = `sheet-cache:${sheetUrl}`;
+  const cached = readCache(cacheKey);
+  if (cached) return { rows: cached, source: 'cache', error: null };
+  const rows = await fetchAndParseSheet(sheetUrl);
+  writeCache(cacheKey, rows);
+  return { rows, source: 'sheet', error: null };
+}
+
+/**
+ * Завантажує CSV лише з живої таблиці — без будь-якого локального фолбека. Товарні каталоги
+ * (шини/диски) мають показувати або живі дані, або явну помилку (result.source === 'error'),
+ * ніколи заглушку.
+ */
+export async function loadLiveCsv(sheetUrl: string): Promise<LoadResult> {
+  try {
+    return await fetchSheetCached(sheetUrl);
+  } catch (err) {
+    return { rows: [], source: 'error', error: err instanceof Error ? err.message : 'Таблиця недоступна' };
+  }
+}
+
 /**
  * Завантажує CSV: спершу sheetUrl (з кешем sessionStorage), при невдачі — localUrl.
  * Якщо sheetUrl порожній — одразу йде в localUrl (навмисний dev-режим "таблицю ще не
- * налаштували", див. SHEET_*_CSV в config.ts).
- *
- * allowLocalFallback: false — коли sheetUrl налаштований, але фетч впав, НЕ підміняти
- * товари демо-даними мовчки: товарні каталоги мають показувати або живі дані з таблиці,
- * або явну помилку (result.source === 'error'), а не застарілий/невідповідний реальному
- * асортименту локальний CSV.
+ * налаштували", див. SHEET_*_CSV в config.ts). Використовується лише для листа "Контент" —
+ * це soft-фіча текстових оверрайдів, для якої застарілий локальний текст безпечний фолбек.
  */
-export async function loadCsv(
-  sheetUrl: string,
-  localUrl: string,
-  opts: { allowLocalFallback?: boolean } = {}
-): Promise<LoadResult> {
-  const { allowLocalFallback = true } = opts;
-  const cacheKey = `sheet-cache:${sheetUrl || localUrl}`;
-
+export async function loadCsv(sheetUrl: string, localUrl: string): Promise<LoadResult> {
   if (sheetUrl) {
-    const cached = readCache(cacheKey);
-    if (cached) {
-      return { rows: cached, source: 'cache', error: null };
-    }
-
     try {
-      const rows = await fetchAndParseSheet(sheetUrl);
-      writeCache(cacheKey, rows);
-      return { rows, source: 'sheet', error: null };
+      return await fetchSheetCached(sheetUrl);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Таблиця недоступна';
-      if (!allowLocalFallback) {
-        return { rows: [], source: 'error', error: message };
-      }
-      // Падаємо на локальний файл, але повідомляємо про причину для дружнього повідомлення в UI.
       try {
         const localRows = await fetchAndParseSheet(localUrl);
         return { rows: localRows, source: 'local', error: message };

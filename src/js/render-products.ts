@@ -1,6 +1,6 @@
 // Каталог шин і дисків: завантаження з CSV, залежні фільтри, сортування,
 // "показати ще", стани завантаження/помилки/порожньо, картки з кнопкою Telegram.
-import { loadCsv } from './sheets';
+import { loadLiveCsv } from './sheets';
 import { parseBool, parsePrice, type CsvRow } from './csv';
 import {
   filterRows,
@@ -16,12 +16,7 @@ import { addItem } from './cart';
 import { getProductImageManifest, type ProductImageSet } from './product-images';
 import { t, onLangChange } from './i18n';
 import { dedupeSlugs, tireSlug, wheelSlug } from './slug';
-import {
-  SHEET_TIRES_CSV,
-  SHEET_WHEELS_CSV,
-  LOCAL_TIRES_CSV,
-  LOCAL_WHEELS_CSV,
-} from '../config';
+import { SHEET_TIRES_CSV, SHEET_WHEELS_CSV } from '../config';
 
 const PAGE_SIZE = 9;
 
@@ -44,7 +39,6 @@ interface CardInfo {
 interface CatalogConfig {
   idPrefix: 'tires' | 'wheels';
   sheetUrl: string;
-  localUrl: string;
   fields: FieldDef[];
   describe: (row: CsvRow) => CardInfo;
 }
@@ -215,10 +209,10 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   renderSkeleton(grid);
   countEl.textContent = t('product.loading', 'Завантаження…');
 
-  // allowLocalFallback: false — товарні каталоги завжди мають показувати живі дані з
-  // таблиці; якщо фетч впав, показуємо явну помилку, а не застарілий локальний demo-CSV.
+  // Товарні каталоги завжди показують живі дані з таблиці; якщо фетч впав — явна помилка,
+  // ніякого локального фолбека.
   const [result, imageManifest] = await Promise.all([
-    loadCsv(config.sheetUrl, config.localUrl, { allowLocalFallback: false }),
+    loadLiveCsv(config.sheetUrl),
     getProductImageManifest(),
   ]);
 
@@ -445,14 +439,12 @@ export function initCatalogs(): void {
   initCatalog({
     idPrefix: 'tires',
     sheetUrl: SHEET_TIRES_CSV,
-    localUrl: LOCAL_TIRES_CSV,
     fields: TIRES_FIELDS,
     describe: tiresDescribe,
   });
   initCatalog({
     idPrefix: 'wheels',
     sheetUrl: SHEET_WHEELS_CSV,
-    localUrl: LOCAL_WHEELS_CSV,
     fields: WHEELS_FIELDS,
     describe: wheelsDescribe,
   });

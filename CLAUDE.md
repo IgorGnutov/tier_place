@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 TIRE PLACE — a single-page static landing site for a tire/wheel/battery shop in Kryvyi Rih, Ukraine
-(Vite + vanilla TypeScript, no framework, no backend). Product/service data is fetched client-side
-as CSV from published Google Sheets, with local demo CSVs as fallback. Primary language for code
+(Vite + vanilla TypeScript, no framework, no backend). Product/service data (tires/wheels) is
+fetched client-side as CSV from published Google Sheets, live-only — no local demo CSV. The
+"Контент" text-override sheet still has a local demo CSV fallback. Primary language for code
 comments, commit-facing docs, and UI copy is Ukrainian — match that when editing existing files.
 
 ## Commands
@@ -27,20 +28,23 @@ There is no linter configured either.
 
 **Data flow (Google Sheets → CSV → render):**
 - `src/config.ts` is the single place for Google Sheet URLs, contact info, and cache TTL. An empty
-  `SHEET_*_CSV` string means "use only the local demo CSV" (see `sheetCsvUrl()`). The raw
+  `SHEET_CONTENT_CSV` string means "use only the local demo CSV" (see `sheetCsvUrl()`);
+  `SHEET_TIRES_CSV`/`SHEET_WHEELS_CSV` have no such local fallback (see below). The raw
   `spreadsheetId`/`gids` live in `src/data/sheet-ids.json`; `config.ts` imports that JSON and builds
   the export URLs from it, so `scripts/generate-product-pages.mjs` (plain Node, can't import `.ts`)
   can read the same IDs. Edit the IDs in the JSON, everything else in `config.ts`.
-- `src/js/sheets.ts` (`loadCsv`) fetches the sheet CSV, caching successful parses in
-  `sessionStorage` for `SHEET_CACHE_TTL_MS` (5 min). On any failure — network error, HTTP error, or
-  Google returning an HTML login page (public sharing not enabled) — its default behavior falls back
-  to the local CSV in `public/data/`. An empty-but-reachable sheet (0 data rows) is treated the same
-  as unreachable. Callers get back `{ rows, source: 'sheet'|'local'|'cache'|'error', error }`.
-  `render-products.ts` (tires/wheels catalogs) calls it with `{ allowLocalFallback: false }` —
+- `src/js/sheets.ts` exports two loaders. `loadLiveCsv(sheetUrl)` fetches only the live sheet
+  (caching successful parses in `sessionStorage` for `SHEET_CACHE_TTL_MS`, 5 min) and on any
+  failure — network error, HTTP error, Google returning an HTML login page (public sharing not
+  enabled), or an empty-but-reachable sheet (0 data rows) — returns `source: 'error'`, never
+  falling back to anything. `render-products.ts` (tires/wheels catalogs) uses this exclusively:
   product data must always come from the live sheet; on failure it shows an explicit
-  "Товари на даний момент не доступні" error state with a retry button instead of silently
-  rendering stale local demo data. `content.ts`/`admin/content-tab.ts` (the "Контент" sheet) keep
-  the default fallback-to-local behavior, since that's a soft text-override feature, not product data.
+  "Товари на даний момент не доступні" error state with a retry button. There is no local demo CSV
+  for tires/wheels at all (removed on purpose — it was never reachable in practice and only caused
+  confusion about which data was "real"). `loadCsv(sheetUrl, localUrl)` keeps the old
+  fetch-then-fall-back-to-local-file behavior and is used only by `content.ts`/`admin/content-tab.ts`
+  (the "Контент" sheet) — a soft text-override feature, not product data, where falling back to a
+  locally bundled default is fine.
 - `public/.htaccess` sets a CSP; `connect-src` must include `https://*.googleusercontent.com`
   (the Sheets CSV export redirect target) and `img-src` must allow arbitrary `https:` hosts (product
   photo URLs pasted into the sheet can point anywhere, e.g. postimg.cc) — tightening either silently
@@ -130,7 +134,7 @@ client-rendered:**
 Vite only auto-copies assets it can statically discover (`<img src>`, `import`). The hero slider
 (`src/js/hero-slider.ts`) builds image paths at runtime as strings (`` `${base}-${width}.${ext}` ``
 for responsive AVIF/WebP/JPEG sources), which Vite's static analysis can't see. So anything
-referenced *dynamically* — slider photos and the demo/fallback CSVs — must live under `public/`
+referenced *dynamically* — slider photos and the "Контент" demo/fallback CSV — must live under `public/`
 (copied verbatim into `dist/`), not under `src/` or a bare top-level `assets/`/`data/`. When adding
 new dynamically-referenced files, put them in `public/`.
 

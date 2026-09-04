@@ -1,5 +1,6 @@
 // Єдине місце з посиланнями на джерела даних і контактною інформацією.
-// Якщо SHEET_*_CSV порожній рядок — сайт автоматично бере демо-дані з /data/*.csv.
+// Якщо SHEET_CONTENT_CSV порожній рядок — сайт автоматично бере локальний demo CSV
+// (шини/диски такого фолбека не мають, див. коментар біля SHEET_TIRES_CSV нижче).
 // Самі spreadsheetId/gid зберігаються в src/data/sheet-ids.json — той самий файл читає
 // й scripts/generate-product-pages.mjs (build-скрипт не може імпортувати цей .ts напряму).
 import sheetIds from './data/sheet-ids.json';
@@ -8,12 +9,10 @@ function sheetCsvUrl(spreadsheetId: string, gid = 0): string {
   return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
 }
 
+// Шини/диски завжди читаються тільки з живої таблиці — без локального demo-фолбека
+// (render-products.ts викликає loadLiveCsv, не loadCsv).
 export const SHEET_TIRES_CSV = sheetCsvUrl(sheetIds.spreadsheetId, sheetIds.gids.tires);
 export const SHEET_WHEELS_CSV = sheetCsvUrl(sheetIds.spreadsheetId, sheetIds.gids.wheels);
-
-// Локальні демо-CSV як фолбек, якщо посилання вище порожнє або таблиця недоступна.
-export const LOCAL_TIRES_CSV = 'data/tires.csv';
-export const LOCAL_WHEELS_CSV = 'data/wheels.csv';
 
 // Лист "Контент" — тексти, редаговані через /admin. Порожній рядок — адмінка ще не налаштована,
 // сайт показує тексти, захардкоджені прямо в index.html.
