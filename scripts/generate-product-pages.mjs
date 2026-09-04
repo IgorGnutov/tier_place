@@ -325,19 +325,26 @@ function buildProductPage(product, baseHtml, imageSet) {
   // AutoPartsStore лишається — це загальносайтова інформація про бізнес.
   html = removeJsonLd(html, ['Service', 'FAQPage', 'BreadcrumbList']);
 
+  // Google вимагає price+priceCurrency всередині offers, якщо offers взагалі присутній —
+  // рядок без ціни ("ціна за запитом") лишає Product без offers повністю, а не з "поламаним"
+  // Offer без price (інакше Rich Results Test і Search Console позначать сторінку як invalid).
   const productJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.title,
     image: ogImageUrl ? [ogImageUrl] : undefined,
     sku: product.slug,
-    offers: {
-      '@type': 'Offer',
-      price: product.price ?? undefined,
-      priceCurrency: 'UAH',
-      availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      url: pageUrl,
-    },
+    brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+    offers:
+      product.price !== null
+        ? {
+            '@type': 'Offer',
+            price: product.price,
+            priceCurrency: 'UAH',
+            availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            url: pageUrl,
+          }
+        : undefined,
   };
   const catalogName = product.kind === 'tires' ? 'Шини' : 'Диски';
   const catalogUrl = `https://tire-place.com.ua/${product.kind === 'tires' ? '#tires' : '#wheels'}`;
@@ -367,7 +374,7 @@ function buildProductPage(product, baseHtml, imageSet) {
   html = html.replace(/"assets\//g, '"/assets/');
   html = html.replace(/, assets\//g, ', /assets/');
 
-  return html;
+  return { html, ogImageUrl };
 }
 
 function writeProductPage(product, html, root) {
@@ -395,6 +402,7 @@ function describeTire(row) {
     price,
     inStock: parseBool(row.in_stock),
     imageUrl: row.image_url?.trim() || null,
+    brand: row.brand?.trim() || null,
     key: `tires:${title}:${size}`,
   };
 }
@@ -417,6 +425,7 @@ function describeWheel(row) {
     price,
     inStock: parseBool(row.in_stock),
     imageUrl: row.image_url?.trim() || null,
+    brand: row.brand?.trim() || null,
     key: `wheels:${title}:${size}`,
   };
 }
@@ -465,10 +474,14 @@ function writeSitemap(products, root) {
   const sitemapPath = `${root}/dist/sitemap.xml`;
   const base = readFileSync(sitemapPath, 'utf8');
   const productEntries = products
-    .map(
-      (p) =>
-        `  <url>\n    <loc>https://tire-place.com.ua/${p.kind}/${p.slug}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>`
-    )
+    .map((p) => {
+      // image:image допомагає індексуванню фото товару в Google Images окремо від Web Search —
+      // беремо той самий ownDomain-URL, що вже пішов у og:image (не хотлінк на postimg.cc).
+      const imageTag = p.ogImageUrl
+        ? `\n    <image:image>\n      <image:loc>${escapeAttr(p.ogImageUrl)}</image:loc>\n    </image:image>`
+        : '';
+      return `  <url>\n    <loc>https://tire-place.com.ua/${p.kind}/${p.slug}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>${imageTag}\n  </url>`;
+    })
     .join('\n');
   const xml = base.replace('</urlset>', `${productEntries}\n</urlset>`);
   writeFileSync(sitemapPath, xml);
@@ -495,7 +508,8 @@ async function main() {
   const detailImageAssets = await buildProductImageAssets(products, root);
   for (const product of products) {
     const imageSet = product.imageUrl ? detailImageAssets.get(product.imageUrl) : undefined;
-    const html = buildProductPage(product, baseHtml, imageSet);
+    const { html, ogImageUrl } = buildProductPage(product, baseHtml, imageSet);
+    product.ogImageUrl = ogImageUrl;
     writeProductPage(product, html, root);
   }
   writeSitemap(products, root);
