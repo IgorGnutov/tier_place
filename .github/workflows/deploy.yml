@@ -23,11 +23,15 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Deploy dist/ over FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: Wandalen/wretry.action@v3.8.0
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_REMOTE_DIR }}
-          local-dir: dist/
-          protocol: ftp
+          action: SamKirkland/FTP-Deploy-Action@v4.3.5
+          attempt_limit: 3
+          attempt_delay: 15000
+          with: |
+            server: ${{ secrets.FTP_SERVER }}
+            username: ${{ secrets.FTP_USERNAME }}
+            password: ${{ secrets.FTP_PASSWORD }}
+            server-dir: ${{ secrets.FTP_REMOTE_DIR }}
+            local-dir: dist/
+            protocol: ftp
