@@ -22,16 +22,23 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Хостинг рве керуючий FTP-конект на середині заливки ("Server sent FIN packet
+      # unexpectedly") — тому FTPS (шифрований конект живе стабільніше і не ріжеться
+      # проміжними мережевими вузлами), збільшений timeout і довша пауза між спробами,
+      # щоб сервер встиг скинути ліміт одночасних з'єднань.
       - name: Deploy dist/ over FTP
         uses: Wandalen/wretry.action@v3.8.0
         with:
           action: SamKirkland/FTP-Deploy-Action@v4.3.5
-          attempt_limit: 3
-          attempt_delay: 15000
+          attempt_limit: 5
+          attempt_delay: 60000
           with: |
             server: ${{ secrets.FTP_SERVER }}
             username: ${{ secrets.FTP_USERNAME }}
             password: ${{ secrets.FTP_PASSWORD }}
             server-dir: ${{ secrets.FTP_REMOTE_DIR }}
             local-dir: dist/
-            protocol: ftp
+            protocol: ftps
+            port: 21
+            timeout: 120000
+            log-level: verbose
