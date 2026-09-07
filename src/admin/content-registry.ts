@@ -125,8 +125,8 @@ export const CONTENT_REGISTRY: ContentBlock[] = [
     key: 'contacts.hoursNote',
     label: 'Графік роботи',
     group: 'Контакти',
-    defaultHtml: 'Щодня, 9:00–19:00 (графік уточнюється)',
-    defaultHtmlRu: 'Ежедневно, 9:00–19:00 (график уточняется)',
+    defaultHtml: 'Щодня, 9:00–17:00 (графік уточнювати)',
+    defaultHtmlRu: 'Ежедневно, 9:00–17:00 (график уточнять)',
   },
   {
     key: 'footer.tagline',

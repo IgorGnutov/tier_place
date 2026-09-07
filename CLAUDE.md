@@ -162,7 +162,10 @@ domain root (Netlify/Cloudflare Pages) or in a GitHub Pages repo subpath.
 - **Sheet column contracts:** the exact header names each CSV must have (tires/wheels/service) are
   documented in `README.md` — changing a `describe()`/`FieldDef` key in code must stay in sync with
   the corresponding Google Sheet header, since sheet data is read by header name.
-- Known placeholders not yet filled in by the site owner: `CONTACTS.hoursNote` (approximate) —
-  see `SEO.md` for the full list before "finalizing" anything domain- or contact-related. The production domain is `tire-place.com.ua` (hosted at adm.tools,
+- Opening hours are confirmed (daily 9:00-17:00); the "(графік уточнювати)" note in
+  `CONTACTS.hoursNote` is deliberate — the owner does occasionally shift them. The same interval is
+  duplicated in `index.html`'s `openingHoursSpecification` JSON-LD, so change both together.
+  See `SEO.md` for the full list of remaining placeholders before "finalizing" anything domain- or
+  contact-related. The production domain is `tire-place.com.ua` (hosted at adm.tools,
   deployed via `.github/workflows/deploy.yml` on push to `main`), already set in `index.html` SEO
   tags, `public/robots.txt`, and `public/sitemap.xml`.

@@ -49,8 +49,9 @@ export const CONTACTS = {
   // карткою закладу (не можна сконструювати вручну, checksum у pb= рахує сам Google).
   mapEmbedSrc:
     'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d10702.366707079294!2d33.3937881!3d47.8862323!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x40db2777b45a2567%3A0x43eca4088a29b7de!2z0JDQstGC0L7QvNCw0LPQsNC30LjQvSDQqNC40L0g0YLQsCDQkNC60YPQvNGD0LvRj9GC0L7RgNGW0LIgVElSRSBQTEFDRSDQmtGA0LjQstC40Lkg0KDRltCz!5e0!3m2!1suk!2sua!4v1785272668034!5m2!1suk!2sua',
-  // Графік роботи — уточнюється власником, поки орієнтовний.
-  hoursNote: 'Щодня, 9:00–19:00 (графік уточнюється)',
+  // Графік підтверджений власником: щодня 9:00–17:00. Примітка "(графік уточнювати)" — бо бувають
+  // зміни. Той самий інтервал дублюється в openingHoursSpecification (JSON-LD в index.html).
+  hoursNote: 'Щодня, 9:00–17:00 (графік уточнювати)',
 } as const;
 
 export function buildTelegramLink(message: string): string {

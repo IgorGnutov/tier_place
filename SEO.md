@@ -1,5 +1,8 @@
 # SEO — TIRE PLACE
 
+Цей файл — про он-пейдж і технічне SEO. Зовнішні посилання, каталоги, Google Business Profile,
+партнерські й PR-розміщення винесено окремо: [LINKBUILDING.md](LINKBUILDING.md).
+
 ## Title / Description сторінки
 
 - **`<title>`** (49 симв.): `Шини, диски, акумулятори Кривий Ріг — TIRE PLACE`
@@ -73,7 +76,7 @@
 - JSON-LD:
   - `AutoPartsStore` (LocalBusiness) з `name`, `image` (2 `ImageObject`), `telephone`,
     `address` (PostalAddress), `geo` (47.8860397, 33.3937558), `url`, `hasMap`,
-    `openingHoursSpecification` (заглушка — уточнити графік), `priceRange`.
+    `openingHoursSpecification` (щодня 09:00–17:00, підтверджено власником), `priceRange`.
   - `Service` для шиномонтажу з `areaServed` і `offers.priceRange`.
   - `FAQPage` — 7 питань, синхронізовано з видимим FAQ-блоком на сторінці.
   - `BreadcrumbList` — Головна → Шини та диски → Шиномонтаж → Акумулятори → Контакти.
@@ -108,7 +111,6 @@
       в `src/config.ts`).
 - [ ] Додати реальні **фото** для Google Business Profile і для решти слотів hero-слайдера
       (диски, акумулятори, зона шиномонтажу) — інструкція в `README.md`.
-- [ ] Підтвердити чи уточнити **графік роботи** (зараз орієнтовний, позначено TODO).
 - [x] Домен визначено (`tire-place.com.ua`), плейсхолдер замінено в SEO-тегах, robots.txt
       і sitemap.xml.
 - [ ] Заповнити Google-таблиці для **Шин** і **Дисків** реальним асортиментом (зараз порожні —
