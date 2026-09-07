@@ -153,10 +153,23 @@ button {
   background: var(--gradient-accent);
 }
 
-.section-head p {
+/* [data-content-key] — бо блоки з листа "Контент" приходять як набір <p>, тож їхній
+   контейнер у розмітці — <div>, а не <p> (див. catalog.intro). */
+.section-head p,
+.section-head [data-content-key] {
   max-width: 60ch;
   margin-inline: auto;
   color: var(--color-text-muted);
+}
+
+/* Абзаци всередині контентних блоків (значення з листа "Контент" — це готовий HTML із <p>):
+   свій вертикальний ритм, без зайвого відступу на останньому абзаці. */
+[data-content-key] > p {
+  margin-block: 0 var(--space-xs);
+}
+
+[data-content-key] > p:last-child {
+  margin-block-end: 0;
 }
 
 /* Ручний перенос рядка всередині контентних блоків (Google Sheets, /admin), який має діяти

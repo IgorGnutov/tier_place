@@ -71,7 +71,7 @@ export const RU_STRINGS: Record<string, string> = {
 
   // --- service ---
   'service.eyebrow': 'Услуги',
-  'service.headingHtml': 'Шиномонтаж <span class="accent">без очереди</span>',
+  'service.headingHtml': 'Шиномонтаж <span class="accent">по записи</span>',
   'service.bookMessage': 'Здравствуйте, хочу записаться на шиномонтаж',
 
   // --- batteries ---
