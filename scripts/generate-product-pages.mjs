@@ -272,7 +272,10 @@ function buildProductPage(product, baseHtml, imageSet) {
   const pageUrl = `https://tire-place.com.ua/${product.kind}/${product.slug}/`;
   const metaTitle = `${product.title} — купити в TIRE PLACE, Кривий Ріг`;
   const priceLine = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'ціна за запитом';
-  const metaDescription = `${product.title}, ${product.size} — ${priceLine}. ${
+  // У шин title уже закінчується розміром ("... 195/65 R15") — без цієї перевірки опис виходив
+  // із дублем. У дисків size додає PCD/ET, яких у title немає, тож він потрібен.
+  const sizePart = product.size && !product.title.includes(product.size) ? `, ${product.size}` : '';
+  const metaDescription = `${product.title}${sizePart} — ${priceLine}. ${
     product.inStock ? 'В наявності' : 'Немає в наявності'
   } в автомагазині TIRE PLACE, Кривий Ріг.`;
   // Соцмережі краще тягнути з власного домену (стабільніше, ніж покладатись, що postimg.cc
@@ -332,6 +335,7 @@ function buildProductPage(product, baseHtml, imageSet) {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.title,
+    description: metaDescription,
     image: ogImageUrl ? [ogImageUrl] : undefined,
     sku: product.slug,
     brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
@@ -343,6 +347,17 @@ function buildProductPage(product, baseHtml, imageSet) {
             priceCurrency: 'UAH',
             availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
             url: pageUrl,
+            // 14 днів на товар належної якості — мінімум за Законом України «Про захист прав
+            // споживачів»; той самий текст видимий у футері (footer.terms), бо Google вимагає,
+            // щоб умови повернення були доступні користувачу, а не лише в markup.
+            hasMerchantReturnPolicy: {
+              '@type': 'MerchantReturnPolicy',
+              applicableCountry: 'UA',
+              returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+              merchantReturnDays: 14,
+              returnMethod: 'https://schema.org/ReturnInStore',
+              returnFees: 'https://schema.org/FreeReturn',
+            },
           }
         : undefined,
   };
