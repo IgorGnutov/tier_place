@@ -325,3 +325,29 @@
   display: flex;
   gap: var(--space-sm);
 }
+
+/* Черга модерації відгуків — та сама картка, що й у замовлень (.admin-order). */
+.admin-order__status--published {
+  background: var(--color-success);
+  color: var(--color-accent-contrast);
+}
+
+.admin-order__status--rejected {
+  background: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.admin-review__stars {
+  color: var(--color-accent);
+  letter-spacing: 0.1em;
+  margin-left: var(--space-xs);
+}
+
+.admin-review__body {
+  font-size: var(--fs-small);
+  white-space: pre-wrap;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs);
+  margin: var(--space-xs) 0;
+}

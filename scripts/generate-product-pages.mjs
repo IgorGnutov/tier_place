@@ -239,6 +239,107 @@ function buildPhotoHtml(product, imageSet) {
   return `<picture>${sources}<img src="${escapeAttr(fallbackSrc)}" alt="${escapeAttr(product.title)}" loading="eager" /></picture>`;
 }
 
+/** Середня оцінка й кількість. null, якщо відгуків немає: Google вважає сторінку invalid, якщо
+ *  aggregateRating присутній з reviewCount 0, тож порожній агрегат не емітимо взагалі. */
+function reviewsAggregate(reviews) {
+  if (reviews.length === 0) return null;
+  const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+  return { value: Math.round((sum / reviews.length) * 10) / 10, count: reviews.length };
+}
+
+function reviewsWord(count) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'відгук';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'відгуки';
+  return 'відгуків';
+}
+
+function starsHtml(rating) {
+  return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+}
+
+function formatReviewDate(isoDate) {
+  if (!isoDate) return '';
+  const [year, month, day] = isoDate.split('-');
+  return `${day}.${month}.${year}`;
+}
+
+function buildReviewFormHtml() {
+  // Порядок зірок у DOM природний (1→5), щоб стрілки клавіатури рухали оцінку в той самий бік,
+  // що й око. Заповнення "вибрана + усі менші" робить CSS через :has() — див. product-detail.css.
+  const stars = [1, 2, 3, 4, 5]
+    .map(
+      (value) => `
+            <input type="radio" id="review-rating-${value}" name="rating" value="${value}" required />
+            <label for="review-rating-${value}"><span class="visually-hidden">${value} з 5</span>★</label>`
+    )
+    .join('');
+
+  return `
+        <form class="review-form" id="review-form" novalidate>
+          <h3 class="review-form__title">Залишити відгук</h3>
+          <fieldset class="review-form__rating">
+            <legend>Оцінка</legend>
+            <div class="review-stars-input">${stars}
+            </div>
+          </fieldset>
+          <label for="review-author">Ваше ім'я</label>
+          <input type="text" id="review-author" name="author" maxlength="60" required autocomplete="name" />
+          <label for="review-body">Відгук</label>
+          <textarea id="review-body" name="body" rows="4" maxlength="1000" required></textarea>
+          <div class="review-form__honeypot" aria-hidden="true">
+            <label for="review-website">Не заповнюйте це поле</label>
+            <input type="text" id="review-website" name="website" tabindex="-1" autocomplete="off" />
+          </div>
+          <button type="submit" class="btn" id="review-submit">Надіслати відгук</button>
+          <p class="review-form__status" id="review-status" role="status"></p>
+        </form>`;
+}
+
+/** Видимий блок відгуків. Текст статичний український, без data-i18n/data-i18n-attr і без id,
+ *  які чіпає main.js: applyStaticTranslations() перезаписала б їх одразу після старту JS. */
+function buildReviewsHtml(product) {
+  const reviews = product.reviews;
+  const aggregate = reviewsAggregate(reviews);
+
+  const summaryHtml = aggregate
+    ? `
+        <div class="product-reviews__summary">
+          <span class="review-stars" aria-hidden="true">${starsHtml(Math.round(aggregate.value))}</span>
+          <strong class="product-reviews__average">${aggregate.value.toLocaleString('uk-UA', {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          })}</strong>
+          <span class="product-reviews__count">${aggregate.count} ${reviewsWord(aggregate.count)}</span>
+        </div>`
+    : '';
+
+  const listHtml = reviews.length
+    ? `
+        <ul class="product-reviews__list">${reviews
+          .map(
+            (review) => `
+          <li class="review">
+            <div class="review__head">
+              <strong class="review__author">${escapeHtml(review.author)}</strong>
+              <span class="review-stars" role="img" aria-label="Оцінка ${review.rating} з 5">${starsHtml(review.rating)}</span>
+              ${review.datePublished ? `<time class="review__date" datetime="${escapeAttr(review.datePublished)}">${formatReviewDate(review.datePublished)}</time>` : ''}
+            </div>
+            <p class="review__body">${escapeHtml(review.body)}</p>
+          </li>`
+          )
+          .join('')}
+        </ul>`
+    : `
+        <p class="product-reviews__empty">Відгуків ще немає. Будьте першим.</p>`;
+
+  return `
+      <section class="product-reviews">
+        <h2 class="product-reviews__title">Відгуки</h2>${summaryHtml}${listHtml}${buildReviewFormHtml()}
+      </section>`;
+}
+
 function buildMainHtml(product, imageSet) {
   const photoHtml = buildPhotoHtml(product, imageSet);
   const specsHtml = product.specs.map((s) => `<li>${escapeHtml(s.label)}: ${escapeHtml(s.value)}</li>`).join('');
@@ -246,7 +347,16 @@ function buildMainHtml(product, imageSet) {
   const statusText = product.inStock ? 'В наявності' : 'Немає в наявності';
   const priceText = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'Ціна за запитом';
   const backHref = product.kind === 'tires' ? '/#tires' : '/#wheels';
-  const productData = jsonForScript({ key: product.key, title: product.title, sizeLine: product.size, price: product.price });
+  const productData = jsonForScript({
+    id: product.productId,
+    key: product.key,
+    title: product.title,
+    sizeLine: product.size,
+    price: product.price,
+  });
+  // Без id у колонці "id" відгук неможливо привʼязати до товару — блок (разом із формою)
+  // не рендеримо взагалі, замість того щоб збирати відгуки, які нікуди не потраплять.
+  const reviewsHtml = product.productId ? buildReviewsHtml(product) : '';
 
   return `
     <div class="container product-detail">
@@ -262,7 +372,7 @@ function buildMainHtml(product, imageSet) {
             <button type="button" class="btn" id="product-buy-btn"${product.inStock ? '' : ' disabled'}>Купити</button>
           </div>
         </div>
-      </div>
+      </div>${reviewsHtml}
     </div>
     <script type="application/json" id="product-data">${productData}</script>
   `;
@@ -328,6 +438,11 @@ function buildProductPage(product, baseHtml, imageSet) {
   // AutoPartsStore лишається — це загальносайтова інформація про бізнес.
   html = removeJsonLd(html, ['Service', 'FAQPage', 'BreadcrumbList']);
 
+  // Агрегат рахується рівно по тих відгуках, що видимі на сторінці — цього прямо вимагає Google
+  // (розмічений контент має бути присутній для користувача). Обидва поля або є разом з видимим
+  // блоком, або відсутні повністю: aggregateRating з reviewCount 0 робить сторінку invalid.
+  const aggregate = reviewsAggregate(product.reviews);
+
   // Google вимагає price+priceCurrency всередині offers, якщо offers взагалі присутній —
   // рядок без ціни ("ціна за запитом") лишає Product без offers повністю, а не з "поламаним"
   // Offer без price (інакше Rich Results Test і Search Console позначать сторінку як invalid).
@@ -360,6 +475,25 @@ function buildProductPage(product, baseHtml, imageSet) {
             },
           }
         : undefined,
+    aggregateRating: aggregate
+      ? {
+          '@type': 'AggregateRating',
+          ratingValue: aggregate.value,
+          reviewCount: aggregate.count,
+          bestRating: 5,
+          worstRating: 1,
+        }
+      : undefined,
+    // itemReviewed не потрібен — він неявний через вкладення Review у Product.
+    review: aggregate
+      ? product.reviews.map((review) => ({
+          '@type': 'Review',
+          author: { '@type': 'Person', name: review.author },
+          datePublished: review.datePublished ?? undefined,
+          reviewBody: review.body,
+          reviewRating: { '@type': 'Rating', ratingValue: review.rating, bestRating: 5, worstRating: 1 },
+        }))
+      : undefined,
   };
   const catalogName = product.kind === 'tires' ? 'Шини' : 'Диски';
   const catalogUrl = `https://tire-place.com.ua/${product.kind === 'tires' ? '#tires' : '#wheels'}`;
@@ -445,6 +579,107 @@ function describeWheel(row) {
   };
 }
 
+const REVIEW_STATUS_PUBLISHED = 'Опубліковано';
+
+/** ISO-дата з колонки timestamp. Apps Script пише "yyyy-MM-dd HH:mm:ss" текстом (апостроф-префікс),
+ *  але якщо Sheets усе-таки зберегла комірку як Date, CSV-експорт віддає локалізований формат —
+ *  тоді розбираємо "DD.MM.YYYY". Нерозпізнане → null: datePublished рекомендоване, а не
+ *  обовʼязкове, тож краще пропустити поле, ніж викинути відгук. */
+function reviewDate(raw) {
+  const value = String(raw ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  const dotted = /^(\d{2})\.(\d{2})\.(\d{4})/.exec(value);
+  if (dotted) return `${dotted[3]}-${dotted[2]}-${dotted[1]}`;
+  return null;
+}
+
+function groupReviews(rows) {
+  const byProduct = new Map();
+  for (const row of rows) {
+    if (row.status !== REVIEW_STATUS_PUBLISHED) continue;
+
+    const productId = (row.product_id ?? '').trim();
+    const author = (row.author ?? '').trim();
+    const body = (row.body ?? '').trim();
+    const rating = Number.parseInt(row.rating, 10);
+    // Порожнє імʼя/текст або оцінка поза 1-5 зробили б розмітку невалідною (author і
+    // ratingValue — обовʼязкові поля Review), тож такий рядок пропускаємо.
+    if (!productId || !author || !body || !(rating >= 1 && rating <= 5)) {
+      console.warn(`generate-product-pages: пропущено відгук ${row.review_id || '(без id)'} — неповні або некоректні дані.`);
+      continue;
+    }
+
+    if (!byProduct.has(productId)) byProduct.set(productId, []);
+    byProduct.get(productId).push({ author, body, rating, datePublished: reviewDate(row.timestamp) });
+  }
+
+  for (const list of byProduct.values()) {
+    // Рядки лежать у порядку додавання — розворот дає новіші-перші. Сортування за датою
+    // уточнює порядок, якщо власник вручну переставляв рядки; Array#sort стабільний, тож
+    // відгуки з однаковою (або відсутньою) датою лишаються в розвернутому порядку.
+    list.reverse();
+    list.sort((a, b) => (b.datePublished ?? '').localeCompare(a.datePublished ?? ''));
+  }
+  return byProduct;
+}
+
+async function loadReviews() {
+  const gid = sheetIds.gids.reviews;
+  // Лист "Відгуки" створює Apps Script при першому відгуку, тому спочатку його gid невідомий і
+  // в sheet-ids.json стоїть null. Це не помилка — білд просто йде без відгуків, доки власник
+  // не впише gid (див. README.md, "Відгуки на товари").
+  if (gid === null || gid === undefined || gid === '') {
+    console.log('generate-product-pages: gids.reviews не заданий — сторінки товару будуються без відгуків.');
+    return { reviewsByProduct: new Map(), errors: [] };
+  }
+
+  try {
+    const rows = await fetchCsvRows(sheetCsvUrl(sheetIds.spreadsheetId, gid));
+    return { reviewsByProduct: groupReviews(rows), errors: [] };
+  } catch (err) {
+    return { reviewsByProduct: new Map(), errors: [`відгуки — ${err.message}`] };
+  }
+}
+
+/** Розкладає відгуки по товарах за колонкою "id". Порожній або неунікальний id — не привʼязка:
+ *  slug виводиться з назви й розміру, тож перейменування товару чи зміна порядку рядків-дублікатів
+ *  відірвали б відгуки від товару або приклеїли б їх до чужого. */
+function attachReviews(products, reviewsByProduct) {
+  const idCounts = new Map();
+  for (const product of products) {
+    if (product.productId) idCounts.set(product.productId, (idCounts.get(product.productId) ?? 0) + 1);
+  }
+
+  const duplicated = [...idCounts.entries()].filter(([, count]) => count > 1).map(([id]) => id);
+  for (const id of duplicated) {
+    console.warn(`generate-product-pages: id "${id}" повторюється в таблицях — ці товари згенеровано без блоку відгуків.`);
+  }
+
+  const matchedIds = new Set();
+  for (const product of products) {
+    if (!product.productId || duplicated.includes(product.productId)) {
+      product.productId = '';
+      product.reviews = [];
+      continue;
+    }
+    product.reviews = reviewsByProduct.get(product.productId) ?? [];
+    matchedIds.add(product.productId);
+  }
+
+  // Одним рядком, а не по товару: доки власник не заповнив колонку, інакше в лог полетіли б
+  // сотні однакових попереджень.
+  const missingId = products.filter((product) => !product.productId).length;
+  if (missingId > 0) {
+    console.warn(`generate-product-pages: у ${missingId} товар(ів) порожня або неунікальна колонка id — сторінки без блоку відгуків.`);
+  }
+
+  for (const id of reviewsByProduct.keys()) {
+    if (!matchedIds.has(id)) {
+      console.warn(`generate-product-pages: відгуки з product_id "${id}" не належать жодному товару — проігноровано.`);
+    }
+  }
+}
+
 async function loadProducts() {
   const tiresUrl = sheetCsvUrl(sheetIds.spreadsheetId, sheetIds.gids.tires);
   const wheelsUrl = sheetCsvUrl(sheetIds.spreadsheetId, sheetIds.gids.wheels);
@@ -468,9 +703,12 @@ async function loadProducts() {
   const tireSlugs = dedupeSlugs(tireRows, tireSlug);
   const wheelSlugs = dedupeSlugs(wheelRows, wheelSlug);
 
+  // productId читається тут, а не в describeTire/describeWheel: ті функції продубльовані на
+  // клієнті (див. коментар на початку файлу), і колонка "id" клієнту не потрібна — тримаємо
+  // обовʼязок синхронізації в тих самих межах, що й був.
   const products = [
-    ...tireRows.map((row, i) => ({ ...describeTire(row), kind: 'tires', slug: tireSlugs[i] })),
-    ...wheelRows.map((row, i) => ({ ...describeWheel(row), kind: 'wheels', slug: wheelSlugs[i] })),
+    ...tireRows.map((row, i) => ({ ...describeTire(row), kind: 'tires', slug: tireSlugs[i], productId: (row.id ?? '').trim() })),
+    ...wheelRows.map((row, i) => ({ ...describeWheel(row), kind: 'wheels', slug: wheelSlugs[i], productId: (row.id ?? '').trim() })),
   ].filter((product) => {
     // Порожній slug = усі колонки-ідентифікатори рядка порожні. Такий товар дав би URL
     // "/tires//" і перезаписав би dist/tires/index.html — пропускаємо повністю.
@@ -480,6 +718,10 @@ async function loadProducts() {
     }
     return true;
   });
+
+  const { reviewsByProduct, errors: reviewErrors } = await loadReviews();
+  errors.push(...reviewErrors);
+  attachReviews(products, reviewsByProduct);
 
   return { products, errors };
 }

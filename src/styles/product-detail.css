@@ -77,3 +77,193 @@
   font-size: var(--fs-h3);
   color: var(--color-accent);
 }
+
+/* Відгуки — той самий генератор. Блок є лише коли в товару заповнена колонка "id". */
+.product-reviews {
+  margin-top: var(--space-xl);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-lg);
+}
+
+.product-reviews__title {
+  font-family: var(--font-heading);
+  font-size: var(--fs-h3);
+  margin: 0 0 var(--space-sm);
+}
+
+.product-reviews__summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.product-reviews__average {
+  font-family: var(--font-heading);
+  font-size: var(--fs-h3);
+}
+
+.product-reviews__count,
+.product-reviews__empty {
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.review-stars {
+  color: var(--color-accent);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.product-reviews__list {
+  list-style: none;
+  margin: 0 0 var(--space-lg);
+  padding: 0;
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.review {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-sm);
+}
+
+.review__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-xs);
+}
+
+.review__date {
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.review__body {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-width: 560px;
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-md);
+}
+
+.review-form__title {
+  font-family: var(--font-heading);
+  font-size: var(--fs-h3);
+  margin: 0 0 var(--space-xs);
+}
+
+.review-form label {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.review-form input[type='text'],
+.review-form textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.6em 0.9em;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--fs-body);
+  font-family: var(--font-body);
+}
+
+.review-form textarea {
+  min-height: auto;
+  resize: vertical;
+}
+
+.review-form input:focus-visible,
+.review-form textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.review-form__rating {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.review-form__rating legend {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  padding: 0;
+}
+
+.review-stars-input {
+  display: flex;
+  gap: 0.1em;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+/* Сам radio не видно, але він лишається справжнім фокусованим контролом (клавіатура працює,
+   клік іде через <label>). Не нульового розміру: нульовий елемент браузери й автотести
+   вважають невзаємодійним. */
+.review-stars-input input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.review-stars-input label {
+  color: var(--color-border-strong);
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+/* Заповнюємо вибрану зірку й усі менші. Зірки лежать у DOM у природному порядку 1→5 (щоб
+   стрілки клавіатури не рухали оцінку в протилежний від візуального бік), тому "усі менші" —
+   це :has(~ input:checked), а не сусідський ~. */
+.review-stars-input input:checked + label,
+.review-stars-input label:has(~ input:checked),
+.review-stars-input label:hover,
+.review-stars-input label:has(~ label:hover) {
+  color: var(--color-accent);
+}
+
+.review-stars-input input:focus-visible + label {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+/* Honeypot: приховуємо з потоку, а не display: none — частина ботів свідомо пропускає
+   поля з display: none, але заповнює те, що формально видиме. */
+.review-form__honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.review-form__status {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.review-form__status:empty {
+  display: none;
+}
+
+.review-form__status--error {
+  color: var(--color-danger);
+}

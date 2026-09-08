@@ -1,8 +1,10 @@
-// Точка входу /admin: пароль-гейт + перемикач вкладок "Замовлення" (за замовчуванням) / "Тексти".
+// Точка входу /admin: пароль-гейт + перемикач вкладок "Замовлення" (за замовчуванням) /
+// "Відгуки" / "Тексти".
 import '../styles/admin.css';
 import { CONTENT_API_URL } from '../config';
 import { callApi, getSavedPassword, savePassword, clearPassword, showStatus } from './api';
 import { initOrdersTab } from './orders';
+import { initReviewsTab } from './reviews-tab';
 import { initContentTab } from './content-tab';
 
 const mainEl = document.getElementById('admin-main');
@@ -62,6 +64,7 @@ function renderTabsShell(password: string): void {
     <div class="admin-toolbar">
       <div class="admin-tabs" role="tablist">
         <button class="admin-tabs__btn" data-tab="orders" role="tab" type="button">Замовлення</button>
+        <button class="admin-tabs__btn" data-tab="reviews" role="tab" type="button">Відгуки</button>
         <button class="admin-tabs__btn" data-tab="content" role="tab" type="button">Тексти</button>
       </div>
       <div class="admin-toolbar__actions">
@@ -101,6 +104,8 @@ function renderTabsShell(password: string): void {
     tabButtons.forEach((btn) => btn.classList.toggle('is-active', btn.dataset.tab === tab));
     if (tab === 'content') {
       initContentTab(tabContentEl, password);
+    } else if (tab === 'reviews') {
+      initReviewsTab(tabContentEl, password);
     } else {
       initOrdersTab(tabContentEl, password);
     }

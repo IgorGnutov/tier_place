@@ -1,0 +1,127 @@
+- generic [active] [ref=e1]:
+  - link "Перейти до основного контенту" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "TIRE PLACE — на головну" [ref=e5] [cursor=pointer]:
+        - /url: /#home
+        - generic [ref=e6]:
+          - generic [ref=e7]: TIRE
+          - generic [ref=e8]: PLACE
+      - navigation "Основна навігація" [ref=e9]:
+        - link "Шини" [ref=e10] [cursor=pointer]:
+          - /url: /#tires
+        - link "Диски" [ref=e11] [cursor=pointer]:
+          - /url: /#wheels
+        - link "Шиномонтаж" [ref=e12] [cursor=pointer]:
+          - /url: /#service
+        - link "Акумулятори" [ref=e13] [cursor=pointer]:
+          - /url: /#batteries
+        - link "Контакти" [ref=e14] [cursor=pointer]:
+          - /url: /#contacts
+      - generic [ref=e15]:
+        - group "Мова сайту" [ref=e16]:
+          - link "UA" [ref=e17] [cursor=pointer]:
+            - /url: /
+          - generic [ref=e18]: /
+          - link "RU" [ref=e19] [cursor=pointer]:
+            - /url: /ru/
+        - 'link "Подзвонити: +38 (098) 071-93-93" [ref=e20] [cursor=pointer]':
+          - /url: tel:+380980719393
+          - generic [ref=e23]: +38 (098) 071-93-93
+        - button "Кошик" [ref=e24] [cursor=pointer]
+  - main [ref=e29]:
+    - generic [ref=e30]:
+      - link "← Назад до каталогу" [ref=e31] [cursor=pointer]:
+        - /url: /#tires
+      - generic [ref=e32]:
+        - img "Laufenn I Fit Ice LW71 175/70 R13" [ref=e35]
+        - generic [ref=e36]:
+          - heading "Laufenn I Fit Ice LW71 175/70 R13" [level=1] [ref=e37]
+          - list [ref=e38]:
+            - listitem [ref=e39]: "Сезон: Зима"
+            - listitem [ref=e40]: "Шипи: Ні"
+            - listitem [ref=e41]: "Індекс навантаження: 82"
+            - listitem [ref=e42]: "Індекс швидкості: T"
+            - listitem [ref=e43]: "Рік: 2025"
+            - listitem [ref=e44]: "Країна: Угорщина"
+          - generic [ref=e45]: В наявності
+          - generic [ref=e46]:
+            - generic [ref=e47]: 2 150 грн
+            - button "Купити" [ref=e48] [cursor=pointer]
+      - generic [ref=e49]:
+        - heading "Відгуки" [level=2] [ref=e50]
+        - paragraph [ref=e51]: Відгуків ще немає. Будьте першим.
+        - generic [ref=e52]:
+          - heading "Залишити відгук" [level=3] [ref=e53]
+          - group "Оцінка" [ref=e54]:
+            - generic [ref=e56]:
+              - radio "1 з 5 ★"
+              - generic [ref=e57] [cursor=pointer]:
+                - generic [ref=e58]: 1 з 5
+                - text: ★
+              - radio "2 з 5 ★"
+              - generic [ref=e59] [cursor=pointer]:
+                - generic [ref=e60]: 2 з 5
+                - text: ★
+              - radio "3 з 5 ★"
+              - generic [ref=e61] [cursor=pointer]:
+                - generic [ref=e62]: 3 з 5
+                - text: ★
+              - radio "4 з 5 ★"
+              - generic [ref=e63] [cursor=pointer]:
+                - generic [ref=e64]: 4 з 5
+                - text: ★
+              - radio "5 з 5 ★"
+              - generic [ref=e65] [cursor=pointer]:
+                - generic [ref=e66]: 5 з 5
+                - text: ★
+          - generic [ref=e67]: Ваше ім'я
+          - textbox "Ваше ім'я" [ref=e68]
+          - generic [ref=e69]: Відгук
+          - textbox "Відгук" [ref=e70]
+          - generic [ref=e71]:
+            - text: Не заповнюйте це поле
+            - textbox [ref=e72]
+          - button "Надіслати відгук" [ref=e73] [cursor=pointer]
+  - contentinfo [ref=e74]:
+    - generic [ref=e75]:
+      - generic [ref=e76]:
+        - generic [ref=e77]:
+          - link "TIRE PLACE — на головну" [ref=e78] [cursor=pointer]:
+            - /url: /#home
+            - generic [ref=e79]:
+              - generic [ref=e80]: TIRE
+              - generic [ref=e81]: PLACE
+          - paragraph [ref=e82]: Твій шинний простір. Шини, диски, акумулятори та власний шиномонтаж у Кривому Розі.
+        - navigation "Навігація у футері" [ref=e83]:
+          - link "Шини" [ref=e84] [cursor=pointer]:
+            - /url: /#tires
+          - link "Диски" [ref=e85] [cursor=pointer]:
+            - /url: /#wheels
+          - link "Шиномонтаж" [ref=e86] [cursor=pointer]:
+            - /url: /#service
+          - link "Акумулятори" [ref=e87] [cursor=pointer]:
+            - /url: /#batteries
+          - link "Контакти" [ref=e88] [cursor=pointer]:
+            - /url: /#contacts
+        - generic [ref=e89]:
+          - paragraph [ref=e90]:
+            - link "+38 (098) 071-93-93" [ref=e91] [cursor=pointer]:
+              - /url: tel:+380980719393
+          - paragraph [ref=e92]: Авторинок «Термінал», вул. Нікопольське Шосе 1Г, Кривий Ріг
+          - link "Telegram TIRE PLACE" [ref=e94] [cursor=pointer]:
+            - /url: https://t.me/AnastasiyaBaza
+      - paragraph [ref=e97]: "TIRE PLACE — автомагазин шин, дисків та акумуляторів у Кривому Розі, розташований на авторинку «Термінал» по вулиці Нікопольське шосе, 1Г. У нас можна придбати шини: літні, зимові та всесезонні для легкових авто, кросоверів і невеликих вантажних авто в розмірах від R13 до R22. Якщо не знаєте точний розмір шини — допоможемо з цим питання. Окремо представлені легкосплавні (литі) та штамповані диски, під будь-яке авто — з підбором за діаметром, шириною, розболтовкою (PCD) та вильотом (ET). Власний шиномонтаж на території магазину виконує балансування коліс, ремонт проколів, перебортування та сезонну заміну шин. Запишіться заздалегідь, щоб час та день був максимально зручним для вас. Також у продажу автомобільні акумулятори (АКБ) відомих виробників — Bosch, Varta, Westa, Fiamm, Rombat та інші — з підбором під Ваше авто. Магазин розташований на окремій парковці із зручним заїздом. Пишіть нам у Telegram, або телефонуйте, щоб уточнити ціну чи записатися на шиномонтаж."
+      - paragraph [ref=e98]: "Доставка: самовивіз з магазину в Кривому Розі або Нова Пошта по всій Україні за тарифами перевізника. Повернення: 14 днів на товар належної якості — невживаний, з цілою упаковкою та комплектацією — згідно із Законом України «Про захист прав споживачів»."
+      - generic [ref=e99]:
+        - paragraph [ref=e100]: © 2026 TIRE PLACE. Всі права захищені.
+        - paragraph [ref=e101]: Твій шинний простір
+  - link "Написати нам у Telegram":
+    - /url: https://t.me/AnastasiyaBaza
+  - status [ref=e102]
+  - dialog [ref=e103]:
+    - generic [ref=e104]:
+      - heading [level=2] [ref=e105]: Кошик
+      - button [ref=e106] [cursor=pointer]: ×
+    - paragraph [ref=e109]: Кошик порожній
