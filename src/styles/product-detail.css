@@ -28,6 +28,7 @@
 }
 
 .product-detail__photo {
+  position: relative;
   background: var(--color-bg-raised);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -39,7 +40,12 @@
   width: 100%;
 }
 
+/* position: absolute, а не height: 100% — у flex-контейнері з aspect-ratio-висотою
+   height: 100% на <img> іноді резолвиться в intrinsic-висоту зображення замість висоти
+   боксу (флексова циркулярність відсотків), і overflow: hidden обрізає верх/низ фото. */
 .product-detail__photo img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
