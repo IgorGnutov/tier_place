@@ -224,10 +224,10 @@ function buildMainHtml(page, text, lang, t, crumbs) {
       fillCatalogPanel(shellPanel, page.kind, rows, t, page.type === 'facet' ? { field: page.field, value: page.value } : null)
     );
   } else {
-    // Контентна сторінка: CTA веде в Telegram із заготовленим текстом — той самий прийом,
-    // що в render-service.ts для кнопок на головній.
-    const message = `Вітаю! Питання щодо: ${text.h1}`;
-    const href = `https://t.me/AnastasiyaBaza?text=${encodeURIComponent(message)}`;
+    // Контентна сторінка: CTA веде просто в чат Telegram без передзаповненого тексту —
+    // ?text= не в усіх клієнтах Telegram надійно підставляється в приватному чаті (той самий
+    // застережний коментар, що й у render-service.ts), тож простіше відкрити чистий чат.
+    const href = 'https://t.me/AnastasiyaBaza';
     parts.push(
       `<div class="cluster-page__cta"><a class="btn" href="${escapeAttr(href)}" target="_blank" rel="noopener">` +
         `${escapeHtml(t('cta.write', 'Написати нам у Telegram'))}</a>` +
