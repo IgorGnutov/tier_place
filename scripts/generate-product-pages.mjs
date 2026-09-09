@@ -6,44 +6,16 @@
 // рендер картки) живе в src/shared/*.mjs — плейн-ESM, який читає і Vite, і плейн-Node.
 // Дублікатів більше немає.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
-import Papa from 'papaparse';
-import sharp from 'sharp';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../src/shared/slug.mjs';
 import { describeTire, describeWheel } from '../src/shared/describe.mjs';
 import { escapeHtml, escapeAttr } from '../src/shared/html-escape.mjs';
-
-const root = fileURLToPath(new URL('..', import.meta.url));
+import { root, readBuildJson } from './lib/build-dir.mjs';
+import { appendUrls } from './lib/urls.mjs';
+import { SITE_URL } from '../src/shared/constants.mjs';
 
 /** Сторінки товару існують лише українською (RU-версії — фаза 2), тож переклад тривіальний.
  *  @type {import('../src/shared/describe.mjs').Translate} */
 const t = (_key, uk) => uk;
-const sheetIds = JSON.parse(readFileSync(`${root}/src/data/sheet-ids.json`, 'utf8'));
-
-function sheetCsvUrl(spreadsheetId, gid = 0) {
-  return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
-}
-
-async function fetchCsvRows(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
-  const clean = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
-  // Google на помилку доступу віддає HTML-сторінку логіну/шарингу зі статусом 200 — без цієї
-  // перевірки Papa Parse розібрав би її як "рядки товарів" і ми б згенерували сміттєві сторінки.
-  // Той самий захист уже є на клієнті (src/js/sheets.ts).
-  if (/^\s*<(!doctype html|html)/i.test(clean)) {
-    throw new Error('таблиця недоступна — Google повернув HTML замість CSV (перевірте доступ "за посиланням")');
-  }
-  const parsed = Papa.parse(clean, {
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: (h) => h.trim(),
-    transform: (v) => v.trim(),
-  });
-  return parsed.data.filter((row) => Object.values(row).some((v) => v !== ''));
-}
 
 /** Значення підставляється функцією-замінником, а не рядком: у рядку-заміні `$&`, `` $` ``, `$'`,
  *  `$1` мають спеціальне значення, тож назва товару з `$&` зіпсувала б результат. */
@@ -86,81 +58,6 @@ function removeJsonLd(html, types) {
 /** `<` екранується, щоб рядок із таблиці (напр. "</script>") не міг закрити наш <script>. */
 function jsonForScript(value) {
   return JSON.stringify(value).replace(/</g, '\\u003c');
-}
-
-// Фото товару — довільні зовнішні URL, вставлені вручну в Google Таблицю (postimg.cc тощо,
-// див. CLAUDE.md/.htaccess: img-src навмисно відкритий на будь-який https-хост). Публічні
-// image-proxy (wsrv.nl, statically.io) блокують саме postimg.cc/зловживані хости, тож
-// стискаємо самі: під час білда качаємо кожне унікальне фото один раз (товари часто ділять
-// одну стокову фотографію моделі шини на кілька розмірів) і кодуємо sharp'ом у AVIF/WebP/JPEG
-// — ті самі якості, що й в optimize-photos.mjs. Мініатюра (CARD_WIDTH) іде в JSON-маніфест,
-// який на клієнті читає product-images.ts для карток каталогу; більший варіант (DETAIL_WIDTH)
-// одразу вшивається в статичну сторінку товару нижче. Помилка на одному фото (мертве
-// посилання, недоступний хост) НЕ валить білд — товар просто лишається зі старим прямим
-// посиланням на оригінал, як до цієї оптимізації.
-const CARD_WIDTH = 480;
-const DETAIL_WIDTH = 900;
-const IMAGE_FORMATS = [
-  ['avif', (img) => img.avif({ quality: 55 })],
-  ['webp', (img) => img.webp({ quality: 70 })],
-  ['jpg', (img) => img.jpeg({ quality: 75, progressive: true, mozjpeg: true })],
-];
-const IMAGE_FETCH_CONCURRENCY = 6;
-
-async function encodeImageVariant(buffer, hash, width, root) {
-  const files = {};
-  for (const [format, applyFormat] of IMAGE_FORMATS) {
-    const relPath = `assets/products/${hash}-${width}.${format}`;
-    const pipeline = applyFormat(sharp(buffer).resize({ width, withoutEnlargement: true }));
-    await pipeline.toFile(`${root}/dist/${relPath}`);
-    files[format] = `/${relPath}`;
-  }
-  return files;
-}
-
-/** Качає й стискає кожне унікальне фото товару один раз. Повертає Map "оригінальний URL →
- *  набір DETAIL_WIDTH-файлів" (для сторінок товару) і паралельно пише dist/data/product-images.json
- *  з набором CARD_WIDTH-файлів (для карток каталогу на клієнті). */
-async function buildProductImageAssets(products, root) {
-  const urls = [...new Set(products.map((p) => p.imageUrl).filter(Boolean))];
-  const outDir = `${root}/dist/assets/products`;
-  mkdirSync(outDir, { recursive: true });
-
-  const cardManifest = {};
-  const detailAssets = new Map();
-
-  let cursor = 0;
-  async function worker() {
-    while (cursor < urls.length) {
-      const url = urls[cursor++];
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const buffer = Buffer.from(await res.arrayBuffer());
-        const meta = await sharp(buffer).metadata();
-        const sourceWidth = meta.width ?? DETAIL_WIDTH;
-        const hash = createHash('sha1').update(url).digest('hex').slice(0, 16);
-
-        const cardWidth = Math.min(CARD_WIDTH, sourceWidth);
-        const detailWidth = Math.min(DETAIL_WIDTH, sourceWidth);
-
-        const cardFiles = await encodeImageVariant(buffer, hash, cardWidth, root);
-        // Джерело вже вужче за DETAIL_WIDTH — не кодуємо той самий розмір вдруге.
-        const detailFiles = detailWidth === cardWidth ? cardFiles : await encodeImageVariant(buffer, hash, detailWidth, root);
-
-        cardManifest[url] = cardFiles;
-        detailAssets.set(url, detailFiles);
-      } catch (err) {
-        console.warn(`generate-product-pages: не вдалося оптимізувати фото ${url} — ${err.message}. Товар покаже оригінальне посилання.`);
-      }
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(IMAGE_FETCH_CONCURRENCY, urls.length) }, worker));
-
-  mkdirSync(`${root}/dist/data`, { recursive: true });
-  writeFileSync(`${root}/dist/data/product-images.json`, JSON.stringify(cardManifest));
-
-  return detailAssets;
 }
 
 function replaceMain(html, mainInnerHtml) {
@@ -475,7 +372,7 @@ function buildProductPage(product, baseHtml, imageSet) {
 }
 
 function writeProductPage(product, html, root) {
-  const outDir = `${root}/dist/${product.kind}/${product.slug}`;
+  const outDir = `${root}dist/${product.kind}/${product.slug}`;
   mkdirSync(outDir, { recursive: true });
   writeFileSync(`${outDir}/index.html`, html);
 }
@@ -524,24 +421,6 @@ function groupReviews(rows) {
   return byProduct;
 }
 
-async function loadReviews() {
-  const gid = sheetIds.gids.reviews;
-  // Лист "Відгуки" створює Apps Script при першому відгуку, тому спочатку його gid невідомий і
-  // в sheet-ids.json стоїть null. Це не помилка — білд просто йде без відгуків, доки власник
-  // не впише gid (див. README.md, "Відгуки на товари").
-  if (gid === null || gid === undefined || gid === '') {
-    console.log('generate-product-pages: gids.reviews не заданий — сторінки товару будуються без відгуків.');
-    return { reviewsByProduct: new Map(), errors: [] };
-  }
-
-  try {
-    const rows = await fetchCsvRows(sheetCsvUrl(sheetIds.spreadsheetId, gid));
-    return { reviewsByProduct: groupReviews(rows), errors: [] };
-  } catch (err) {
-    return { reviewsByProduct: new Map(), errors: [`відгуки — ${err.message}`] };
-  }
-}
-
 /** Розкладає відгуки по товарах за колонкою "id". Порожній або неунікальний id — не привʼязка:
  *  slug виводиться з назви й розміру, тож перейменування товару чи зміна порядку рядків-дублікатів
  *  відірвали б відгуки від товару або приклеїли б їх до чужого. */
@@ -581,35 +460,17 @@ function attachReviews(products, reviewsByProduct) {
   }
 }
 
-async function loadProducts() {
-  const tiresUrl = sheetCsvUrl(sheetIds.spreadsheetId, sheetIds.gids.tires);
-  const wheelsUrl = sheetCsvUrl(sheetIds.spreadsheetId, sheetIds.gids.wheels);
+function loadProducts() {
+  const data = readBuildJson('data.json', 'scripts/fetch-data.mjs');
 
-  // Помилка фетчу і "таблиця порожня, але доступна" — різні речі: перше має завалити білд
-  // (див. main()), друге лишається валідним станом. Тому збираємо помилки окремо від рядків.
-  const errors = [];
-  let tireRows = [];
-  let wheelRows = [];
-  try {
-    tireRows = await fetchCsvRows(tiresUrl);
-  } catch (err) {
-    errors.push(`шини — ${err.message}`);
-  }
-  try {
-    wheelRows = await fetchCsvRows(wheelsUrl);
-  } catch (err) {
-    errors.push(`диски — ${err.message}`);
-  }
+  const tireSlugs = dedupeSlugs(data.tires, tireSlug);
+  const wheelSlugs = dedupeSlugs(data.wheels, wheelSlug);
 
-  const tireSlugs = dedupeSlugs(tireRows, tireSlug);
-  const wheelSlugs = dedupeSlugs(wheelRows, wheelSlug);
-
-  // productId читається тут, а не в describeTire/describeWheel: ті функції продубльовані на
-  // клієнті (див. коментар на початку файлу), і колонка "id" клієнту не потрібна — тримаємо
-  // обовʼязок синхронізації в тих самих межах, що й був.
+  // productId читається тут, а не в describeTire/describeWheel: колонка "id" потрібна лише
+  // цьому скрипту (привʼязка відгуків), клієнтському каталогу — ні.
   const products = [
-    ...tireRows.map((row, i) => ({ ...describeTire(row, t), kind: 'tires', slug: tireSlugs[i], productId: (row.id ?? '').trim() })),
-    ...wheelRows.map((row, i) => ({ ...describeWheel(row, t), kind: 'wheels', slug: wheelSlugs[i], productId: (row.id ?? '').trim() })),
+    ...data.tires.map((row, i) => ({ ...describeTire(row, t), kind: 'tires', slug: tireSlugs[i], productId: (row.id ?? '').trim() })),
+    ...data.wheels.map((row, i) => ({ ...describeWheel(row, t), kind: 'wheels', slug: wheelSlugs[i], productId: (row.id ?? '').trim() })),
   ].filter((product) => {
     // Порожній slug = усі колонки-ідентифікатори рядка порожні. Такий товар дав би URL
     // "/tires//" і перезаписав би dist/tires/index.html — пропускаємо повністю.
@@ -620,61 +481,50 @@ async function loadProducts() {
     return true;
   });
 
-  const { reviewsByProduct, errors: reviewErrors } = await loadReviews();
-  errors.push(...reviewErrors);
-  attachReviews(products, reviewsByProduct);
-
-  return { products, errors };
+  attachReviews(products, groupReviews(data.reviews));
+  return products;
 }
 
-function writeSitemap(products, root) {
-  const today = new Date().toISOString().slice(0, 10);
-  const sitemapPath = `${root}/dist/sitemap.xml`;
-  const base = readFileSync(sitemapPath, 'utf8');
-  const productEntries = products
-    .map((p) => {
+/** Дописує URL сторінок товару в накопичувач для scripts/generate-sitemap.mjs. */
+function collectUrls(products) {
+  appendUrls(
+    products.map((p) => ({
+      loc: `${SITE_URL}/${p.kind}/${p.slug}/`,
+      changefreq: 'weekly',
+      priority: '0.6',
       // image:image допомагає індексуванню фото товару в Google Images окремо від Web Search —
       // беремо той самий ownDomain-URL, що вже пішов у og:image (не хотлінк на postimg.cc).
-      const imageTag = p.ogImageUrl
-        ? `\n    <image:image>\n      <image:loc>${escapeAttr(p.ogImageUrl)}</image:loc>\n    </image:image>`
-        : '';
-      return `  <url>\n    <loc>https://tire-place.com.ua/${p.kind}/${p.slug}/</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>${imageTag}\n  </url>`;
-    })
-    .join('\n');
-  const xml = base.replace('</urlset>', `${productEntries}\n</urlset>`);
-  writeFileSync(sitemapPath, xml);
+      images: p.ogImageUrl ? [p.ogImageUrl] : [],
+    }))
+  );
 }
 
-async function main() {
-  const { products, errors } = await loadProducts();
-
-  // Деплой (SamKirkland/FTP-Deploy-Action) синхронізує dist/ з видаленням зайвого на сервері:
-  // "успішний" білд без сторінок товару стер би з живого сайту всі вже опубліковані сторінки.
-  // Тому будь-яка помилка завантаження таблиці — фатальна, і саме ДО запису будь-яких файлів:
-  // білд падає, деплой не запускається, на сервері лишається попередня робоча версія.
-  if (errors.length > 0) {
-    throw new Error(`не вдалося завантажити дані таблиці (${errors.join('; ')}) — білд зупинено, щоб деплой не стер уже опубліковані сторінки товару.`);
-  }
+function main() {
+  // Фатальна перевірка "таблиця недоступна" живе у scripts/fetch-data.mjs і спрацьовує ДО
+  // запису будь-яких файлів у dist/ — тут дані вже гарантовано валідні.
+  const products = loadProducts();
 
   if (products.length === 0) {
-    // Порожня, але доступна таблиця — валідний стан (так само трактує це клієнтський loadCsv).
+    // Порожня, але доступна таблиця — валідний стан (так само трактує це клієнтський loadLiveCsv).
     console.log('generate-product-pages: немає товарів для генерації сторінок (таблиці доступні, але порожні).');
     return;
   }
 
-  const baseHtml = readFileSync(`${root}/dist/index.html`, 'utf8');
-  const detailImageAssets = await buildProductImageAssets(products, root);
+  const baseHtml = readFileSync(`${root}dist/index.html`, 'utf8');
+  const detailImageAssets = new Map(Object.entries(readBuildJson('images.json', 'scripts/build-product-images.mjs').detail));
   for (const product of products) {
     const imageSet = product.imageUrl ? detailImageAssets.get(product.imageUrl) : undefined;
     const { html, ogImageUrl } = buildProductPage(product, baseHtml, imageSet);
     product.ogImageUrl = ogImageUrl;
     writeProductPage(product, html, root);
   }
-  writeSitemap(products, root);
+  collectUrls(products);
   console.log(`generate-product-pages: згенеровано ${products.length} сторінок товару.`);
 }
 
-main().catch((err) => {
+try {
+  main();
+} catch (err) {
   console.error(`generate-product-pages: ${err.message}`);
   process.exit(1);
-});
+}
