@@ -1,7 +1,7 @@
 // Каталог шин і дисків: завантаження з CSV, залежні фільтри, сортування,
 // "показати ще", стани завантаження/помилки/порожньо, картки з кнопкою Telegram.
 import { loadLiveCsv } from './sheets';
-import { parseBool, parsePrice, type CsvRow } from './csv';
+import { type CsvRow } from './csv';
 import {
   filterRows,
   optionsForField,
@@ -13,27 +13,13 @@ import {
 } from './filters';
 import { showToast } from './telegram';
 import { addItem } from './cart';
-import { getProductImageManifest, type ProductImageSet } from './product-images';
+import { getProductImageManifest } from './product-images';
 import { t, onLangChange } from './i18n';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../shared/slug.mjs';
 import { SHEET_TIRES_CSV, SHEET_WHEELS_CSV } from '../config';
 import { PAGE_SIZE } from '../shared/constants.mjs';
-
-interface CardInfo {
-  title: string;
-  specs: { label: string; value: string }[];
-  price: number | null;
-  inStock: boolean;
-  /** Стабільний ідентифікатор товару для кошика — повторне "Купити" на той самий товар
-   *  збільшує кількість замість дублювання позиції. */
-  key: string;
-  /** Абсолютний шлях на статичну сторінку товару, напр. "/tires/continental-.../" */
-  detailUrl: string;
-  /** Короткий рядок розміру/характеристик для відображення в кошику. */
-  sizeLine: string;
-  /** string|null — з фото-блоком, null означає "фото поки немає" (показуємо плейсхолдер). */
-  imageUrl?: string | null;
-}
+import { describeTire, describeWheel, type CardInfo } from '../shared/describe.mjs';
+import { productCardHtml } from '../shared/product-card.mjs';
 
 interface CatalogConfig {
   idPrefix: 'tires' | 'wheels';
@@ -60,113 +46,6 @@ function renderSkeleton(grid: HTMLElement): void {
     card.className = 'product-card skeleton';
     grid.appendChild(card);
   }
-}
-
-function renderCard(info: CardInfo, imageManifest: Record<string, ProductImageSet>): HTMLElement {
-  const card = document.createElement('article');
-  card.className = 'product-card';
-
-  const link = document.createElement('a');
-  link.className = 'product-card__link';
-  // Без detailUrl (рядок таблиці без назви/розміру — сторінки товару для нього немає)
-  // лишаємо <a> без href: він не клікабельний і не веде в нікуди.
-  if (info.detailUrl) link.href = info.detailUrl;
-
-  if (info.imageUrl !== undefined) {
-    const photo = document.createElement('div');
-    photo.className = 'product-card__photo';
-    if (info.imageUrl) {
-      const img = document.createElement('img');
-      img.alt = info.title;
-      img.loading = 'lazy';
-      img.addEventListener('error', () => {
-        // Посилання не веде напряму на файл картинки (сторінка перегляду Google Drive,
-        // видалене фото тощо) — показуємо плейсхолдер замість зламаної іконки браузера.
-        photo.innerHTML = '';
-        photo.classList.add('product-card__photo--placeholder');
-      });
-
-      // Якщо build-скрипт заздалегідь стиснув це фото (див. product-images.ts) — віддаємо
-      // мініатюру AVIF/WebP через <picture>, інакше показуємо оригінал з таблиці як і раніше.
-      const optimized = imageManifest[info.imageUrl];
-      if (optimized?.avif || optimized?.webp) {
-        const picture = document.createElement('picture');
-        if (optimized.avif) {
-          const source = document.createElement('source');
-          source.type = 'image/avif';
-          source.srcset = optimized.avif;
-          picture.appendChild(source);
-        }
-        if (optimized.webp) {
-          const source = document.createElement('source');
-          source.type = 'image/webp';
-          source.srcset = optimized.webp;
-          picture.appendChild(source);
-        }
-        img.src = optimized.jpg ?? info.imageUrl;
-        picture.appendChild(img);
-        photo.appendChild(picture);
-      } else {
-        img.src = info.imageUrl;
-        photo.appendChild(img);
-      }
-    } else {
-      photo.classList.add('product-card__photo--placeholder');
-    }
-    link.appendChild(photo);
-  }
-
-  const title = document.createElement('h3');
-  title.className = 'product-card__title';
-  title.textContent = info.title;
-  link.appendChild(title);
-
-  card.appendChild(link);
-
-  const specs = document.createElement('ul');
-  specs.className = 'product-card__specs';
-  info.specs.forEach((s) => {
-    const li = document.createElement('li');
-    li.textContent = `${s.label}: ${s.value}`;
-    specs.appendChild(li);
-  });
-  card.appendChild(specs);
-
-  const status = document.createElement('span');
-  status.className = `status ${info.inStock ? 'status--in' : 'status--out'}`;
-  status.textContent = info.inStock ? t('product.inStock', 'В наявності') : t('product.outOfStock', 'Немає в наявності');
-  card.appendChild(status);
-
-  const footer = document.createElement('div');
-  footer.className = 'product-card__footer';
-
-  const price = document.createElement('span');
-  price.className = 'product-card__price';
-  price.textContent = info.price !== null ? `${info.price.toLocaleString('uk-UA')} грн` : t('product.priceOnRequest', 'Ціна за запитом');
-  footer.appendChild(price);
-
-  const actions = document.createElement('div');
-  actions.className = 'product-card__actions';
-
-  const buyBtn = document.createElement('button');
-  buyBtn.type = 'button';
-  buyBtn.className = 'btn btn--small';
-  buyBtn.textContent = t('product.buy', 'Купити');
-  if (!info.inStock) {
-    buyBtn.disabled = true;
-    buyBtn.title = t('product.outOfStock', 'Немає в наявності');
-  }
-  buyBtn.addEventListener('click', () => {
-    if (!info.inStock) return;
-    addItem({ key: info.key, title: info.title, sizeLine: info.sizeLine, price: info.price });
-    showToast(t('product.addedToCart', 'Додано в кошик'));
-  });
-  actions.appendChild(buyBtn);
-
-  footer.appendChild(actions);
-  card.appendChild(footer);
-
-  return card;
 }
 
 function renderState(container: HTMLElement, message: string, isError: boolean, onRetry?: () => void): void {
@@ -233,12 +112,41 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   const slugOf = idPrefix === 'tires' ? tireSlug : wheelSlug;
   dedupeSlugs(rows, slugOf).forEach((slug, i) => {
     // Порожній slug — статичної сторінки для такого рядка білд не згенерував, тож картка
-    // лишається без посилання (див. renderCard).
+    // лишається без посилання (див. productCardHtml).
     rows[i].__detailUrl = slug ? `/${idPrefix}/${slug}/` : '';
   });
   let state: FilterState = readStateFromUrl(idPrefix, fields);
   const range = readRangeFromUrl(idPrefix);
   let visibleCount = PAGE_SIZE;
+
+  // "Ключ товару → CardInfo" для делегованого обробника "Купити": одне замикання на грід
+  // замість PAGE_SIZE замикань, які інакше створювались би на кожне перемальовування.
+  const cardsByKey = new Map<string, CardInfo>();
+
+  grid.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement | null)?.closest<HTMLButtonElement>('[data-buy]');
+    if (!btn || btn.disabled) return;
+    const info = cardsByKey.get(btn.dataset.buy ?? '');
+    if (!info) return;
+    addItem({ key: info.key, title: info.title, sizeLine: info.sizeLine, price: info.price });
+    showToast(t('product.addedToCart', 'Додано в кошик'));
+  });
+
+  // Фото не завантажилось (посилання веде на сторінку перегляду Google Drive, фото видалили)
+  // — показуємо плейсхолдер замість зламаної іконки браузера. capture: true обов'язковий:
+  // подія error від <img> не бублює, але в фазі capture на предку спрацьовує.
+  grid.addEventListener(
+    'error',
+    (e) => {
+      const img = e.target;
+      if (!(img instanceof HTMLImageElement)) return;
+      const photo = img.closest('.product-card__photo');
+      if (!photo) return;
+      photo.innerHTML = '';
+      photo.classList.add('product-card__photo--placeholder');
+    },
+    true
+  );
 
   const priceMinInput = el<HTMLInputElement>(`${idPrefix}-price-min`);
   const priceMaxInput = el<HTMLInputElement>(`${idPrefix}-price-max`);
@@ -314,7 +222,10 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
     if (filtered.length === 0) {
       renderState(grid, t('product.notFound', 'Нічого не знайдено за обраними фільтрами.'), false);
     } else {
-      filtered.slice(0, visibleCount).forEach((row) => grid.appendChild(renderCard(config.describe(row), imageManifest)));
+      const shown = filtered.slice(0, visibleCount).map((row) => config.describe(row));
+      cardsByKey.clear();
+      shown.forEach((info) => cardsByKey.set(info.key, info));
+      grid.innerHTML = shown.map((info) => productCardHtml(info, imageManifest, t)).join('');
     }
 
     countEl.textContent = `${t('product.foundLabel', 'Знайдено')}: ${filtered.length}`;
@@ -368,51 +279,6 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   });
 }
 
-function tiresDescribe(row: CsvRow): CardInfo {
-  const price = parsePrice(row.price);
-  const title = `${row.brand ?? ''} ${row.model ?? ''} ${row.width}/${row.profile} R${row.diameter}`.trim();
-  const size = `${row.width}/${row.profile} R${row.diameter}`;
-  return {
-    title,
-    specs: [
-      { label: t('filters.season', 'Сезон'), value: row.season ?? '—' },
-      { label: t('filters.studded', 'Шипи'), value: parseBool(row.studded) ? t('product.yes', 'Так') : t('product.no', 'Ні') },
-      ...(row.load_index ? [{ label: t('product.loadIndex', 'Індекс навантаження'), value: row.load_index }] : []),
-      ...(row.speed_index ? [{ label: t('product.speedIndex', 'Індекс швидкості'), value: row.speed_index }] : []),
-      ...(row.year ? [{ label: t('filters.year', 'Рік'), value: row.year }] : []),
-      ...(row.country ? [{ label: t('filters.country', 'Країна'), value: row.country }] : []),
-    ],
-    price,
-    inStock: parseBool(row.in_stock),
-    key: `tires:${title}:${size}`,
-    detailUrl: row.__detailUrl ?? '',
-    sizeLine: size,
-    imageUrl: row.image_url?.trim() || null,
-  };
-}
-
-function wheelsDescribe(row: CsvRow): CardInfo {
-  const price = parsePrice(row.price);
-  const title = `${row.brand ?? ''} ${row.model ?? ''} R${row.diameter} J${row.width}`.trim();
-  const size = `R${row.diameter} J${row.width} PCD ${row.pcd} ET${row.et}`;
-  return {
-    title,
-    specs: [
-      { label: t('filters.type', 'Тип'), value: row.type ?? '—' },
-      { label: 'PCD', value: row.pcd ?? '—' },
-      { label: 'ET', value: row.et ?? '—' },
-      { label: 'DIA', value: row.dia ?? '—' },
-      ...(row.color ? [{ label: t('product.color', 'Колір'), value: row.color }] : []),
-    ],
-    price,
-    inStock: parseBool(row.in_stock),
-    key: `wheels:${title}:${size}`,
-    detailUrl: row.__detailUrl ?? '',
-    sizeLine: size,
-    imageUrl: row.image_url?.trim() || null,
-  };
-}
-
 const TIRES_FIELDS: FieldDef[] = [
   { key: 'width', label: 'Ширина' },
   { key: 'profile', label: 'Профіль' },
@@ -439,13 +305,13 @@ export function initCatalogs(): void {
     idPrefix: 'tires',
     sheetUrl: SHEET_TIRES_CSV,
     fields: TIRES_FIELDS,
-    describe: tiresDescribe,
+    describe: (row) => describeTire(row, t),
   });
   initCatalog({
     idPrefix: 'wheels',
     sheetUrl: SHEET_WHEELS_CSV,
     fields: WHEELS_FIELDS,
-    describe: wheelsDescribe,
+    describe: (row) => describeWheel(row, t),
   });
 }
 

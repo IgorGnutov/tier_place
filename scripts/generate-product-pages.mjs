@@ -11,10 +11,14 @@ import { createHash } from 'node:crypto';
 import Papa from 'papaparse';
 import sharp from 'sharp';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../src/shared/slug.mjs';
-import { parsePrice, parseBool } from '../src/shared/csv-values.mjs';
+import { describeTire, describeWheel } from '../src/shared/describe.mjs';
 import { escapeHtml, escapeAttr } from '../src/shared/html-escape.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+
+/** Сторінки товару існують лише українською (RU-версії — фаза 2), тож переклад тривіальний.
+ *  @type {import('../src/shared/describe.mjs').Translate} */
+const t = (_key, uk) => uk;
 const sheetIds = JSON.parse(readFileSync(`${root}/src/data/sheet-ids.json`, 'utf8'));
 
 function sheetCsvUrl(spreadsheetId, gid = 0) {
@@ -295,7 +299,7 @@ function buildMainHtml(product, imageSet) {
     id: product.productId,
     key: product.key,
     title: product.title,
-    sizeLine: product.size,
+    sizeLine: product.sizeLine,
     price: product.price,
   });
   // Без id у колонці "id" відгук неможливо привʼязати до товару — блок (разом із формою)
@@ -328,7 +332,7 @@ function buildProductPage(product, baseHtml, imageSet) {
   const priceLine = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'ціна за запитом';
   // У шин title уже закінчується розміром ("... 195/65 R15") — без цієї перевірки опис виходив
   // із дублем. У дисків size додає PCD/ET, яких у title немає, тож він потрібен.
-  const sizePart = product.size && !product.title.includes(product.size) ? `, ${product.size}` : '';
+  const sizePart = product.sizeLine && !product.title.includes(product.sizeLine) ? `, ${product.sizeLine}` : '';
   const metaDescription = `${product.title}${sizePart} — ${priceLine}. ${
     product.inStock ? 'В наявності' : 'Немає в наявності'
   } в автомагазині TIRE PLACE, Кривий Ріг.`;
@@ -476,53 +480,6 @@ function writeProductPage(product, html, root) {
   writeFileSync(`${outDir}/index.html`, html);
 }
 
-function describeTire(row) {
-  const price = parsePrice(row.price);
-  const title = `${row.brand ?? ''} ${row.model ?? ''} ${row.width}/${row.profile} R${row.diameter}`.trim();
-  const size = `${row.width}/${row.profile} R${row.diameter}`;
-  const specs = [
-    { label: 'Сезон', value: row.season || '—' },
-    { label: 'Шипи', value: parseBool(row.studded) ? 'Так' : 'Ні' },
-  ];
-  if (row.load_index) specs.push({ label: 'Індекс навантаження', value: row.load_index });
-  if (row.speed_index) specs.push({ label: 'Індекс швидкості', value: row.speed_index });
-  if (row.year) specs.push({ label: 'Рік', value: row.year });
-  if (row.country) specs.push({ label: 'Країна', value: row.country });
-  return {
-    title,
-    size,
-    specs,
-    price,
-    inStock: parseBool(row.in_stock),
-    imageUrl: row.image_url?.trim() || null,
-    brand: row.brand?.trim() || null,
-    key: `tires:${title}:${size}`,
-  };
-}
-
-function describeWheel(row) {
-  const price = parsePrice(row.price);
-  const title = `${row.brand ?? ''} ${row.model ?? ''} R${row.diameter} J${row.width}`.trim();
-  const size = `R${row.diameter} J${row.width} PCD ${row.pcd} ET${row.et}`;
-  const specs = [
-    { label: 'Тип', value: row.type || '—' },
-    { label: 'PCD', value: row.pcd || '—' },
-    { label: 'ET', value: row.et || '—' },
-    { label: 'DIA', value: row.dia || '—' },
-  ];
-  if (row.color) specs.push({ label: 'Колір', value: row.color });
-  return {
-    title,
-    size,
-    specs,
-    price,
-    inStock: parseBool(row.in_stock),
-    imageUrl: row.image_url?.trim() || null,
-    brand: row.brand?.trim() || null,
-    key: `wheels:${title}:${size}`,
-  };
-}
-
 const REVIEW_STATUS_PUBLISHED = 'Опубліковано';
 
 /** ISO-дата з колонки timestamp. Apps Script пише "yyyy-MM-dd HH:mm:ss" текстом (апостроф-префікс),
@@ -651,8 +608,8 @@ async function loadProducts() {
   // клієнті (див. коментар на початку файлу), і колонка "id" клієнту не потрібна — тримаємо
   // обовʼязок синхронізації в тих самих межах, що й був.
   const products = [
-    ...tireRows.map((row, i) => ({ ...describeTire(row), kind: 'tires', slug: tireSlugs[i], productId: (row.id ?? '').trim() })),
-    ...wheelRows.map((row, i) => ({ ...describeWheel(row), kind: 'wheels', slug: wheelSlugs[i], productId: (row.id ?? '').trim() })),
+    ...tireRows.map((row, i) => ({ ...describeTire(row, t), kind: 'tires', slug: tireSlugs[i], productId: (row.id ?? '').trim() })),
+    ...wheelRows.map((row, i) => ({ ...describeWheel(row, t), kind: 'wheels', slug: wheelSlugs[i], productId: (row.id ?? '').trim() })),
   ].filter((product) => {
     // Порожній slug = усі колонки-ідентифікатори рядка порожні. Такий товар дав би URL
     // "/tires//" і перезаписав би dist/tires/index.html — пропускаємо повністю.
