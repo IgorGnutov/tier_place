@@ -318,6 +318,12 @@
           <div data-content-key="catalog.intro"><p>Підберіть літні, зимові та всесезонні шини чи диски.</p><p>Дані оновлюється автоматично з нашого прайсу.</p><p><strong>По наявності уточнювати.</strong></p><p>Якщо вам потрібна допомога у підборі - звертайтеся за <strong><a href="tel:+380980719393" rel="noopener noreferrer" target="_blank">телефоном: 098 071 93 93</a> </strong>чи в <strong><a href="https://t.me/AnastasiyaBaza" rel="noopener noreferrer" target="_blank">телеграм</a>.</strong></p></div>
         </div>
 
+        <!-- Блок посилань на хаби й фасети (/tires/, /tires/r16/ тощо). Наповнюється на білді
+             (scripts/prerender-home.mjs) з src/data/clusters.json + cluster-pages.json — у dev
+             лишається порожнім, і це нормально. Головне меню свідомо НЕ переводимо на /tires/:
+             інакше секція каталогу на головній стала б недосяжною з меню. -->
+        <div id="cluster-links"></div>
+
         <div class="tabs" role="tablist" aria-label="Каталог шин і дисків" data-i18n-attr="aria-label:catalog.tabsAria">
           <button class="tabs__btn is-active" id="tab-tires" role="tab" aria-selected="true" aria-controls="tires" data-tab="tires" data-i18n="nav.tires">Шини</button>
           <button class="tabs__btn" id="tab-wheels" role="tab" aria-selected="false" aria-controls="wheels" data-tab="wheels">Диски</button>

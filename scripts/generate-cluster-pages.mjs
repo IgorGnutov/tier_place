@@ -14,6 +14,7 @@
 import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 import { root, readBuildJson } from './lib/build-dir.mjs';
 import { appendUrls } from './lib/urls.mjs';
+import { clusterLinksHtml, clusters, pageTexts, CONTENT_PAGE_KEYS, langPrefix } from './lib/cluster-links.mjs';
 import { SITE_URL, PAGE_SIZE } from '../src/shared/constants.mjs';
 import { describeTire, describeWheel, catalogLabel } from '../src/shared/describe.mjs';
 import { productCardHtml } from '../src/shared/product-card.mjs';
@@ -42,13 +43,6 @@ import {
 const LABEL = 'generate-cluster-pages';
 const LANGS = ['uk', 'ru'];
 
-/** Контентні сторінки в порядку, в якому вони стоять у блоці перелінковки. Підписи посилань
- *  беруться з cluster-pages.json (linkLabel), а не з i18n-словника: там уся копія цих сторінок,
- *  включно з RU-варіантом. */
-const CONTENT_PAGE_KEYS = ['shynomontazh', 'farbuvannya-dyskiv', 'zberihannya-shyn', 'akumulyatory', 'kontakty'];
-
-const clusters = JSON.parse(readFileSync(`${root}src/data/clusters.json`, 'utf8'));
-const pageTexts = JSON.parse(readFileSync(`${root}src/data/cluster-pages.json`, 'utf8'));
 const data = readBuildJson('data.json', 'scripts/fetch-data.mjs');
 const images = readBuildJson('images.json', 'scripts/build-product-images.mjs');
 
@@ -61,9 +55,6 @@ const RU_STRINGS = {
 
 /** @param {string} lang @returns {import('../src/shared/describe.mjs').Translate} */
 const makeT = (lang) => (lang === 'ru' ? (key, uk) => RU_STRINGS[key] ?? uk : (_key, uk) => uk);
-
-/** Префікс шляху для мови: RU-версії живуть під /ru/. @param {string} lang */
-const langPrefix = (lang) => (lang === 'ru' ? '/ru' : '');
 
 // ---------------------------------------------------------------- дані товарів
 
@@ -194,49 +185,6 @@ function breadcrumbJsonLd(crumbs, pageUrl) {
       item: c.href ? `${SITE_URL}${c.href}` : pageUrl,
     })),
   };
-}
-
-/**
- * Блок посилань: діаметри, каталог, послуги. Це головний інструмент перелінковки — саме він,
- * а не збільшення кількості карток, дає Google шляхи з головної в фасет і між фасетами.
- * @param {string} currentPath шлях поточної сторінки без слешів по краях (мовний, як у slug)
- * @param {string} lang
- * @param {import('../src/shared/describe.mjs').Translate} t
- * @returns {string}
- */
-function clusterLinksHtml(currentPath, lang, t) {
-  const prefix = langPrefix(lang);
-  const facets = listFacetPages(clusters);
-
-  /** @param {string} label @param {string[]} keys ключі сторінок у cluster-pages.json */
-  const row = (label, keys) => {
-    if (keys.length === 0) return '';
-    const lis = keys
-      .map((key) => {
-        const { slug, linkLabel } = pageTexts[key][lang];
-        return slug === currentPath
-          ? `<li><strong aria-current="page">${escapeHtml(linkLabel)}</strong></li>`
-          : `<li><a href="${escapeAttr(`${prefix}/${slug}/`)}">${escapeHtml(linkLabel)}</a></li>`;
-      })
-      .join('');
-    return `<div class="cluster-links__row"><p class="cluster-links__label">${escapeHtml(label)}</p><ul>${lis}</ul></div>`;
-  };
-
-  const diameterKeys = facets.filter((f) => f.field === 'diameter').map((f) => f.key);
-  const catalogKeys = [
-    'tires',
-    ...facets.filter((f) => f.field === 'season').map((f) => f.key),
-    'wheels',
-    ...facets.filter((f) => f.field === 'type').map((f) => f.key),
-  ];
-
-  return (
-    `<nav class="cluster-links" aria-label="${escapeAttr(t('cluster.linksAria', 'Розділи каталогу та послуг'))}">` +
-    row(t('cluster.byDiameter', 'Шини за діаметром'), diameterKeys) +
-    row(t('cluster.catalogRow', 'Каталог'), catalogKeys) +
-    row(t('cluster.servicesRow', 'Послуги'), CONTENT_PAGE_KEYS) +
-    `</nav>`
-  );
 }
 
 /** @param {{q: string, a: string}[]} faq @param {import('../src/shared/describe.mjs').Translate} t */
