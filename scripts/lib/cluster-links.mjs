@@ -38,19 +38,40 @@ export function clusterLinksHtml(currentPath, lang, t) {
   const prefix = langPrefix(lang);
   const facets = listFacetPages(clusters);
 
-  /** @param {string} label @param {string[]} keys ключі сторінок у cluster-pages.json */
-  const row = (label, keys) => {
+  /**
+   * Ярлик рядка отримує ШТАТНІ i18n-хуки (`data-i18n` + кеш UA-оригіналу в
+   * `data-i18n-original`) — рівно ті, які читає applyStaticTranslations() і які проставляє
+   * generate-ru-html.mjs. Без них ярлик лишався б у мові білда після перемикання мови на
+   * головній (там перемикач працює БЕЗ перезавантаження).
+   * @param {string} key i18n-ключ у src/i18n/ru.json
+   * @param {string} uk український оригінал
+   */
+  const rowLabel = (key, uk) =>
+    `<p class="cluster-links__label" data-i18n="${escapeAttr(key)}" data-i18n-original="${escapeAttr(uk)}">` +
+    `${escapeHtml(t(key, uk))}</p>`;
+
+  /** @param {string} labelHtml @param {string[]} keys ключі сторінок у cluster-pages.json */
+  const row = (labelHtml, keys) => {
     if (keys.length === 0) return '';
     const lis = keys
       .map((key) => {
         const { slug, linkLabel } = pageTexts[key][lang];
         // Поточна сторінка — не посилання: фасет, що лінкує сам на себе, лише розмиває вагу.
-        return slug === currentPath
-          ? `<li><strong aria-current="page">${escapeHtml(linkLabel)}</strong></li>`
-          : `<li><a href="${escapeAttr(`${prefix}/${slug}/`)}">${escapeHtml(linkLabel)}</a></li>`;
+        if (slug === currentPath) return `<li><strong aria-current="page">${escapeHtml(linkLabel)}</strong></li>`;
+        // Обидві мови в data-атрибутах, бо копія цих посилань живе в cluster-pages.json, а не
+        // в ru.json — штатний i18n про неї не знає. Без цього після RU → UA на головній блок
+        // лишався б російським і вів на /ru/… Див. src/js/cluster-links.ts.
+        const uk = pageTexts[key].uk;
+        const ru = pageTexts[key].ru;
+        return (
+          `<li><a href="${escapeAttr(`${prefix}/${slug}/`)}"` +
+          ` data-uk-href="/${escapeAttr(uk.slug)}/" data-ru-href="/ru/${escapeAttr(ru.slug)}/"` +
+          ` data-uk-label="${escapeAttr(uk.linkLabel)}" data-ru-label="${escapeAttr(ru.linkLabel)}"` +
+          `>${escapeHtml(linkLabel)}</a></li>`
+        );
       })
       .join('');
-    return `<div class="cluster-links__row"><p class="cluster-links__label">${escapeHtml(label)}</p><ul>${lis}</ul></div>`;
+    return `<div class="cluster-links__row">${labelHtml}<ul>${lis}</ul></div>`;
   };
 
   const diameterKeys = facets.filter((f) => f.field === 'diameter').map((f) => f.key);
@@ -61,11 +82,13 @@ export function clusterLinksHtml(currentPath, lang, t) {
     ...facets.filter((f) => f.field === 'type').map((f) => f.key),
   ];
 
+  const ariaUk = 'Розділи каталогу та послуг';
   return (
-    `<nav class="cluster-links" aria-label="${escapeAttr(t('cluster.linksAria', 'Розділи каталогу та послуг'))}">` +
-    row(t('cluster.byDiameter', 'Шини за діаметром'), diameterKeys) +
-    row(t('cluster.catalogRow', 'Каталог'), catalogKeys) +
-    row(t('cluster.servicesRow', 'Послуги'), CONTENT_PAGE_KEYS) +
+    `<nav class="cluster-links" aria-label="${escapeAttr(t('cluster.linksAria', ariaUk))}"` +
+    ` data-i18n-attr="aria-label:cluster.linksAria" data-i18n-orig-aria-label="${escapeAttr(ariaUk)}">` +
+    row(rowLabel('cluster.byDiameter', 'Шини за діаметром'), diameterKeys) +
+    row(rowLabel('cluster.catalogRow', 'Каталог'), catalogKeys) +
+    row(rowLabel('cluster.servicesRow', 'Послуги'), CONTENT_PAGE_KEYS) +
     `</nav>`
   );
 }

@@ -3,6 +3,7 @@ import { initI18n } from './js/i18n';
 import { initNav } from './js/nav';
 import { initHeroSlider } from './js/hero-slider';
 import { initCatalogs, initCatalogTabs, initProductBuyButton } from './js/render-products';
+import { initClusterLinks } from './js/cluster-links';
 import { initReviews } from './js/reviews';
 import { initServiceCta } from './js/render-service';
 import { initMap } from './js/map';
@@ -30,6 +31,7 @@ function initFloatingCta(): void {
 initI18n();
 initNav();
 initCatalogTabs();
+initClusterLinks();
 initHeroSlider();
 initCatalogs();
 initProductBuyButton();
