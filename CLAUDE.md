@@ -143,6 +143,32 @@ The first slide in `src/data/gallery.ts` is the LCP image and is duplicated as a
 reorder slides so a different photo becomes first, update both of those `index.html` spots to match.
 (Product detail pages have no hero, so the generator drops that preload `<link>` from its clones.)
 
+**Двомовність (`/` UA + `/ru/`) — RU перекладається на білді, не лише в рантаймі:**
+- Рядки живуть у трьох JSON, і це свідомо JSON, а не `.ts`: їх читає і клієнт, і плейн-Node
+  скрипт (Node 20 у CI не може імпортувати `.ts`, як і для `generate-product-pages.mjs`).
+  `src/i18n/ru.json` — тіло сторінки (`data-i18n` / `data-i18n-html` / `data-i18n-attr`),
+  `src/i18n/ru-meta.json` — `head`/`meta.*`, `src/i18n/ru-content.json` — RU-бейзлайни блоків
+  `data-content-key` (ключ = ключ у `CONTENT_REGISTRY`). `src/i18n/strings.ts` лише зливає перші
+  два в `RU_STRINGS`; `content-registry.ts` підмішує третій у `defaultHtmlRu` кожного блоку.
+  Додаючи ключ у розмітку — додай переклад у відповідний JSON, інакше вузол лишиться українським
+  (це не помилка, а дефолт: «слово однакове в обох мовах»).
+- `scripts/generate-ru-html.mjs` бере `dist/index.html` і віддає `dist/ru/index.html` **уже
+  перекладеним у HTML** — і `head`, і тіло. Це не косметика: Googlebot індексує з затримкою й не
+  гарантує виконання JS, а соцботи не виконують його взагалі, тож доки перекладався лише `head`,
+  сторінка під «шины Кривой Рог» не містила в тексті ні «шины», ні «Кривой Рог».
+- Клієнтський i18n лишається робочим **поверх** цього. Щоб перемикач RU → UA не закешував
+  російський текст як «оригінал» і не залишив сторінку російською, генератор проставляє UA-оригінал
+  у ті самі атрибути, які `i18n.ts`/`content.ts` читають першими: `data-i18n-original`,
+  `data-i18n-orig-<attr>`, `data-content-original`. Тому клієнтського коду цей крок не потребує —
+  але якщо мінятимеш назви цих кеш-атрибутів у `i18n.ts`/`content.ts`, зміни їх і в генераторі.
+- Генератор збирає всі правки по незміненому HTML і застосовує їх з кінця (інакше вставлений
+  `data-i18n-original="&lt;span data-i18n=…"` наступний прохід прийняв би за справжній хук), падає
+  на перетині діапазонів (перекладений вузол усередині іншого перекладеного вузла) і падає, якщо
+  якийсь прохід не переклав жодного вузла — інакше перейменований хук молча віддав би українську
+  сторінку під RU-мета, тобто рівно той баг, який тут вилікували.
+- `<h1>` віддано під ключовий запит («Шини та диски в Кривому Розі» / `hero.h1`), а назва бренду
+  свідомо лишається поза `<h1>` — у `.hero__brand`. Не повертай бренд у `<h1>`.
+
 **Other modules:** `nav.ts` (burger menu, active-link highlighting, header shadow on scroll),
 `hero-slider.ts` (vanilla crossfade slider — autoplay, swipe, ARIA), `map.ts` (lazy-inserts the
 Google Maps iframe so it doesn't block initial load). `src/main.ts` is the single entry point that

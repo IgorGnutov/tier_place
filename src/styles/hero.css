@@ -23,6 +23,16 @@
   line-height: 1.3;
 }
 
+/* Назву бренду свідомо тримаємо поза <h1>: H1 віддано під ключовий запит
+   («Шини та диски в Кривому Розі»), а бренд лишається візуальним акцентом. */
+.hero__brand {
+  font-family: var(--font-heading);
+  font-size: var(--fs-h3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-xs);
+}
+
 .hero__eyebrow {
   font-family: var(--font-heading);
   color: var(--color-accent);
