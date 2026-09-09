@@ -15,7 +15,7 @@ comments, commit-facing docs, and UI copy is Ukrainian — match that when editi
 ```bash
 npm install
 npm run dev             # Vite dev server
-npm run build           # vite build → scripts/generate-ru-html.mjs → scripts/generate-product-pages.mjs
+npm run build           # 8-кроковий конвеєр, див. "Build pipeline" нижче
 npm run preview         # preview built dist/
 npm run typecheck       # tsc --noEmit
 npm run optimize:photos # scripts/optimize-photos.mjs — generate AVIF/WebP/JPEG at 480/768/1200/1920px
@@ -25,6 +25,54 @@ There is no test suite/framework configured in this repo — `typecheck` is the 
 There is no linter configured either.
 
 ## Architecture
+
+**Build pipeline — 8 кроків, порядок трьох із них не випадковий:**
+
+```
+1. vite build                                → dist/index.html, dist/admin/
+2. node scripts/fetch-data.mjs               → .build/data.json      (ФАТАЛЬНО при помилці)
+3. node scripts/build-product-images.mjs     → dist/data/product-images.json + .build/images.json
+4. node scripts/generate-ru-html.mjs         → dist/ru/index.html    (RU-оболонка)
+5. node scripts/generate-product-pages.mjs   → dist/{tires,wheels}/<slug>/
+6. node scripts/generate-cluster-pages.mjs   → хаби, фасети, послуги (UA + RU)
+7. node scripts/prerender-home.mjs           → картки в dist/index.html і dist/ru/index.html
+8. node scripts/generate-sitemap.mjs         → dist/sitemap.xml
+```
+
+- **Крок 2 — один фетч Sheets на весь білд.** Три незалежних звернення давали реальний шанс, що
+  сторінки одного білда побудуються з різних знімків прайсу (власник редагує таблицю під час
+  деплою). Фатальна перевірка «таблиця недоступна» живе тут і спрацьовує **до** запису будь-яких
+  файлів у `dist/` — delete-sync деплой інакше стер би вже опубліковані сторінки.
+- **Прередер — крок 7, після генераторів.** Кроки 4–6 клонують `dist/index.html`; якби картки
+  вписались раніше, кожен клон тягнув би їх за собою. `replaceMain()` їх виріже, але коректність
+  не має триматись на цьому. Крок чіпає обидві мови: картки в `dist/ru/index.html` потребують
+  російських ярликів.
+- **Sitemap — крок 8, з накопичувача.** Кроки 5–7 лише **дописують** свої URL у `.build/urls.json`
+  (корінь репо, у `.gitignore`, свідомо **не** в `dist/`), а фінальний крок віддає файл цілком.
+  Раніше `public/sitemap.xml` містив рукописні записи, а генератор дописував перед `</urlset>` —
+  із трьома генераторами це стало порядко-залежним. `public/sitemap.xml` більше немає.
+- Проміжні артефакти — тільки в `.build/`. Ніякого dev-прев'ю кроків 4–8 (`npm run dev` їх не
+  показує).
+
+**Спільний код клієнта і скриптів — `src/shared/*.mjs`:**
+Плейн-ESM **без TS-синтаксису**, бо ті самі файли імпортує і Vite (з `.ts`), і плейн-Node у CI
+(Node 20 не читає `.ts`). Це не стиль, а вимога: раніше slug-формула й мапінг «рядок CSV →
+назва/характеристики» були свідомо продубльовані між клієнтом і генератором — тепер копій немає.
+`tsconfig.json` має `allowJs: true`, `checkJs: false` (strict-перевірка плейн-JS дала б шум без
+користі); типи публічних функцій описані JSDoc-ом.
+
+| Файл | Що в ньому |
+|---|---|
+| `constants.mjs` | `PAGE_SIZE` (9 — спільна для клієнта і прередера), `SITE_URL` |
+| `normalize.mjs` | канонізація значень фасетних полів (кирилична `С` → латинська `C`) |
+| `slug.mjs` | `slugify`/`tireSlug`/`wheelSlug`/`dedupeSlugs` — **рахуються з сирих значень**, без `normalize` (159 URL уже опубліковані) |
+| `describe.mjs` | `describeTire`/`describeWheel(row, t)` — `t` параметр, бо скрипт передає UA-заглушку, клієнт свій `t` з `i18n.ts` |
+| `product-card.mjs` | `productCardHtml(info, manifest, t)` — картка як рядок HTML |
+| `clusters.mjs` | фасети, поріг, розкладка рядків, крихти, інваріанти |
+| `csv-values.mjs`, `html-escape.mjs` | `parsePrice`/`parseBool`, `escapeHtml`/`escapeAttr` |
+
+`scripts/lib/*.mjs` — те саме для скриптів між собою: `html-patch.mjs` (патч клонованого HTML),
+`sheets.mjs`, `build-dir.mjs`, `urls.mjs`, `cluster-links.mjs`.
 
 **Data flow (Google Sheets → CSV → render):**
 - `src/config.ts` is the single place for Google Sheet URLs, contact info, and cache TTL. An empty
@@ -84,27 +132,28 @@ There is no linter configured either.
 
 **Product detail pages (`/tires/<slug>/`, `/wheels/<slug>/`) — generated at build time, not
 client-rendered:**
-- `scripts/generate-product-pages.mjs` runs last in `npm run build`. It fetches the same tires/wheels
-  sheet CSVs the browser does, then for every row clones the already-built `dist/index.html`, swaps
-  the inside of `<main id="main">` for that product's markup, patches the `<head>` SEO tags, and
-  writes `dist/<kind>/<slug>/index.html` — the same clone-and-patch technique
-  `scripts/generate-ru-html.mjs` uses for `/ru/`. It also appends one `<url>` per product to
-  `dist/sitemap.xml`. There is no dev preview of these pages (`npm run dev` won't show them), same
-  as for `/ru/`.
-- A fetch failure (network, HTTP error, or Google returning its HTML login page instead of CSV) is
-  **fatal** — the script exits non-zero before writing anything. This is deliberate: the deploy
-  action delete-syncs `dist/` onto the server, so a "successful" build with zero product pages would
-  wipe every already-published product page off the live site. An empty-but-reachable sheet (0 rows)
-  is a legitimate non-fatal case and does exactly that, by design.
-- **Product photo optimization (`buildProductImageAssets` in `generate-product-pages.mjs`):**
+- `scripts/generate-product-pages.mjs` (крок 5) читає `.build/data.json`, потім для кожного рядка
+  клонує вже зібраний `dist/index.html`, замінює вміст `<main id="main">` на розмітку товару,
+  патчить SEO-теги в `<head>` і пише `dist/<kind>/<slug>/index.html` — той самий прийом
+  clone-and-patch, що `scripts/generate-ru-html.mjs` для `/ru/`. Свої URL дописує в
+  `.build/urls.json` (крок 8 збирає sitemap). Dev-прев'ю цих сторінок немає.
+- Фетч більше не тут: помилка завантаження таблиці — фатальна на **кроці 2**
+  (`scripts/fetch-data.mjs`), до запису будь-яких файлів. Порожня, але доступна таблиця (0 рядків)
+  — валідний стан, обробляється саме так за задумом.
+- **Видимі крихти + `BreadcrumbList`:** `Головна → Шини → R15 → назва`, де ланка фасета присутня,
+  якщо для товару є закріплена фасетна сторінка (`facetForProduct` у `src/shared/clusters.mjs`; для
+  R13/R20, у яких немає свого діаметра-фасета, підставляється сезонний). Раніше середня ланка вела
+  на `https://tire-place.com.ua/#tires` — якір головної, а не документ. JSON-LD будується з того
+  самого переліку, що видимий на сторінці — цього прямо вимагає Google.
+- **Product photo optimization (`scripts/build-product-images.mjs`, крок 3):**
   product photos are arbitrary external URLs pasted into the sheet (postimg.cc etc. — see the CSP
   note above) and are never resized/compressed at the source. Public image-resize proxies
   (wsrv.nl/images.weserv.nl, statically.io) were tried and rejected — they block postimg.cc by
   policy or have disabled their proxy endpoint outright, so depending on one in production would be
   fragile. Instead, the build downloads every *distinct* `image_url` once (many rows share one stock
   photo per model) and re-encodes it with `sharp` into local AVIF/WebP/JPEG at two widths: 480px
-  (`CARD_WIDTH`, written to `dist/data/product-images.json` — a manifest the client-rendered catalog
-  fetches at runtime, see `src/js/product-images.ts`/`render-products.ts`) and 900px (`DETAIL_WIDTH`,
+  (`CARD_WIDTH` → `dist/data/product-images.json` — a manifest the client-rendered catalog
+  fetches at runtime, see `src/js/product-images.ts`/`render-products.ts`) and 900px (`DETAIL_WIDTH` → `.build/images.json`,
   embedded directly as a `<picture>` in the generated detail HTML, also used for `og:image`/
   `twitter:image`/JSON-LD `image` so social scrapers don't depend on postimg.cc staying up). A
   source narrower than a target width is not upscaled (both widths collapse to one file set). A
@@ -122,13 +171,66 @@ client-rendered:**
   For the same reason nav anchors get rewritten from `href="#tires"` to `href="/#tires"`: a bare hash
   points at homepage sections that don't exist here, and `initCatalogTabs`'s
   `a[data-nav-link][href="#wheels"]` handler would otherwise swallow the click.
-- **Slug formula and CSV-row→title/specs mapping are duplicated on purpose.** `src/js/slug.ts`
-  (client, links the catalog cards) and the plain-JS copies inside `generate-product-pages.mjs`
-  (Node 20 in CI cannot import `.ts`, and adding a transpiler for one script isn't worth it) must
-  stay identical — same as the sheet-column-name sync obligation below. Changing the slug parts, the
-  transliteration table, or `describeTire`/`describeWheel` vs `tiresDescribe`/`wheelsDescribe` in one
-  place *requires* the same edit in the other, or catalog cards will link to URLs that were never
-  generated.
+- Slug-формула і мапінг «рядок CSV → назва/характеристики» **більше не дублюються**: обидві живуть
+  у `src/shared/slug.mjs` і `src/shared/describe.mjs`, а картку в обох місцях малює одна
+  `src/shared/product-card.mjs`. Див. «Спільний код клієнта і скриптів» вище.
+
+**Кластерні сторінки (хаби, фасети, послуги) — 15 UA × 2 мови = 30 URL:**
+- `scripts/generate-cluster-pages.mjs` (крок 6) генерує `/tires/`, `/wheels/` (хаби),
+  `/tires/winter/`, `/tires/r14…r19/`, `/wheels/cast/` (фасети) і 5 контентних сторінок
+  (`/shynomontazh/`, `/farbuvannya-dyskiv/`, `/zberihannya-shyn/`, `/akumulyatory/`,
+  `/kontakty/`) плюс RU-дзеркала під `/ru/`. UA-сторінки клонуються з `dist/index.html`, RU —
+  з **уже перекладеної** `dist/ru/index.html`, тому хедер/футер/базові meta там уже російські.
+  Звідси й порядок кроків: 6 після 4.
+- **Розмітка каталогу не дублюється, а вирізається з оболонки** (`extractCatalogPanel`): панель
+  `<div class="tab-panel" id="tires">` разом із фільтрами, сортуванням, чипсами, грідом і
+  «показати ще». Ids збігаються з головною, тож клієнтський `initCatalog` підхоплює фасетну
+  сторінку без жодних змін, а правка фільтрів в `index.html` автоматично доїжджає сюди.
+  `role="tabpanel"`/`aria-labelledby` зрізаються (tablist тут немає), `is-active` додається
+  обов'язково — `.tab-panel` без нього має `display: none`.
+- **Дві JSON-таблиці даних, обидві в `src/data/`:**
+  - `clusters.json` — **закріплені URL** фасетів. Поріг `FACET_THRESHOLD = 8` товарів діє лише на
+    *створення*: сторінка, що вже є у файлі, генерується **завжди**, навіть із 0 товарів
+    («зараз немає в наявності» + сусідні розміри, HTTP 200) — проіндексований URL мусить
+    лишатись живим. Нове значення ≥ порогу білд підказує в лог **і в `$GITHUB_STEP_SUMMARY`**,
+    але сторінку не створює: закріплення URL — завжди свідомий ручний акт. Видалення рядка =
+    зникнення URL із сайту.
+  - `cluster-pages.json` — тексти (`slug`, `linkLabel`, `h1`, `title`, `description`, `intro`,
+    `faq`, для послуг `serviceType`), окремо на кожну мову. `slug` — **повний** відносний шлях
+    без слешів по краях; у контентних сторінок UA і RU слаги різні
+    (`farbuvannya-dyskiv` / `pokraska-diskov`), у товарних однакові. **Відсутній ключ для
+    сторінки, яку треба згенерувати → білд падає** з переліком.
+- Фасетні поля — тільки `season` і `diameter` для шин, `type` для дисків (`FACET_FIELDS`). Решта
+  колонок лишаються клієнтськими фільтрами: за 143 рядками сторінка під точний розмір дала б
+  1–3 товари, тобто thin content. Бренд-фасети — окрема фаза (найволатильніше поле прайсу).
+- **Фасет як початковий стан фільтра:** сторінка віддає `data-facet-field`/`data-facet-value` на
+  формі, `initCatalog` стартує з ним, показує в чипсах і **дозволяє зняти**. Знімання фіксується
+  параметром `<prefix>_facet=off` — інакше фасет повертався б після перезавантаження, а шароване
+  «без фільтра» посилання показувало б фільтр. `canonical` при цьому не змінюється: це той самий
+  документ з іншим станом фільтра.
+- **Дві пастки в даних, обидві закриті інваріантами, що валять білд:**
+  1. `16С` (кирилична С) і `16C` (латинська) — одне значення; `src/shared/normalize.mjs`
+     канонізує, і це заодно вилікувало наявний баг фільтра «Діаметр» (два пункти-двійники).
+     Slug-формула нормалізацію **не** застосовує — 159 URL уже опубліковані.
+  2. Слаги фасетів і товарів в одному просторі імен (`/tires/r16/` і `/tires/sailun-…-r16-zyma/`);
+     `assertNoSlugCollisions` валить білд із назвами обох сторінок.
+- **`hreflang` тут переписується, а не зрізається** (на сторінках товару — навпаки): власна
+  взаємна пара `uk-UA`/`ru-UA`/`x-default`. Уся решта сайту теж на `uk-UA`/`ru-UA`; `<html lang>`
+  свідомо лишається `uk`/`ru`, бо `i18n.ts` виставляє `document.documentElement.lang = getLang()`
+  і розійшовся б із розміткою.
+- **Перемикач мови на цих сторінках — справжня навігація** `/tires/r16/` ↔ `/ru/tires/r16/`, а не
+  JS-переклад на місці: текст живе в `cluster-pages.json`, якого клієнтський i18n не знає, тож він
+  залишив би опис російським на UA-сторінці. Наслідок, прийнятий свідомо: поведінка перемикача на
+  головній і на кластерних сторінках різна.
+- **JSON-LD:** зрізаються `Service`/`FAQPage`/`BreadcrumbList` головної, лишається
+  `AutoPartsStore`, додається власний `BreadcrumbList`; на сторінках послуг ще `Service` з
+  `provider` і `areaServed: Кривий Ріг`. Свідомо **не** додаємо `FAQPage` (з серпня 2023 Google
+  показує FAQ-rich-results лише авторитетним урядовим і медичним сайтам — видимий FAQ лишаємо,
+  схему ні), `ItemList`/`CollectionPage` (товари знаходяться по звичайних `<a href>`) і
+  `aggregateRating` (див. `SEO.md`).
+- **Головна структурно не змінюється** (Р3 дизайну): меню лишається на якорях `#tires`/`#wheels`,
+  інакше секція каталогу на головній стала б недосяжною з меню. `/tires/` досяжний із блоку
+  посилань `#cluster-links` і з крихт. Розведення з головною — через `title`/`H1`/текст.
 
 **Static asset handling — why `public/` matters here:**
 Vite only auto-copies assets it can statically discover (`<img src>`, `import`). The hero slider
@@ -188,10 +290,15 @@ domain root (Netlify/Cloudflare Pages) or in a GitHub Pages repo subpath.
 - **Sheet column contracts:** the exact header names each CSV must have (tires/wheels/service) are
   documented in `README.md` — changing a `describe()`/`FieldDef` key in code must stay in sync with
   the corresponding Google Sheet header, since sheet data is read by header name.
+- **Фасетні URL і тексти кластерних сторінок:** `src/data/clusters.json` (які URL існують) і
+  `src/data/cluster-pages.json` (уся їхня копія, UA+RU). Додати фасет = рядок у першому **і** ключ
+  у другому, інакше білд падає. Порядок сторінок у блоці перелінковки — `CONTENT_PAGE_KEYS` у
+  `scripts/lib/cluster-links.mjs`.
 - Opening hours are confirmed (daily 9:00-17:00); the "(графік уточнювати)" note in
   `CONTACTS.hoursNote` is deliberate — the owner does occasionally shift them. The same interval is
   duplicated in `index.html`'s `openingHoursSpecification` JSON-LD, so change both together.
   See `SEO.md` for the full list of remaining placeholders before "finalizing" anything domain- or
   contact-related. The production domain is `tire-place.com.ua` (hosted at adm.tools,
   deployed via `.github/workflows/deploy.yml` on push to `main`), already set in `index.html` SEO
-  tags, `public/robots.txt`, and `public/sitemap.xml`.
+  tags і `public/robots.txt`. `sitemap.xml` тепер генерується цілком
+  (`scripts/generate-sitemap.mjs`), рукописного файлу в `public/` немає.
