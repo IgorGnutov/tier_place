@@ -2,15 +2,17 @@
 // "Шини"/"Диски" (аналогічно до scripts/generate-ru-html.mjs — той самий приклад: клонуємо
 // вже зібраний dist/index.html і патчимо лише потрібні частини, замість рендеру з нуля).
 //
-// ЛОГІКА ДУБЛЮЄТЬСЯ З КЛІЄНТА (свідомо): slug-формула (src/js/slug.ts) і мапінг
-// "рядок CSV → назва/характеристики" (tiresDescribe/wheelsDescribe у
-// src/js/render-products.ts) продубльовані тут звичайним JS, бо цей скрипт запускається під
-// Node 20 у CI й не може напряму імпортувати .ts. Змінюючи одне з двох місць — оновіть інше.
+// Спільний із клієнтом код (slug-формула, мапінг "рядок CSV → назва/характеристики",
+// рендер картки) живе в src/shared/*.mjs — плейн-ESM, який читає і Vite, і плейн-Node.
+// Дублікатів більше немає.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import Papa from 'papaparse';
 import sharp from 'sharp';
+import { dedupeSlugs, tireSlug, wheelSlug } from '../src/shared/slug.mjs';
+import { parsePrice, parseBool } from '../src/shared/csv-values.mjs';
+import { escapeHtml, escapeAttr } from '../src/shared/html-escape.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const sheetIds = JSON.parse(readFileSync(`${root}/src/data/sheet-ids.json`, 'utf8'));
@@ -37,64 +39,6 @@ async function fetchCsvRows(url) {
     transform: (v) => v.trim(),
   });
   return parsed.data.filter((row) => Object.values(row).some((v) => v !== ''));
-}
-
-function parsePrice(raw) {
-  if (!raw) return null;
-  const cleaned = raw.replace(/грн\.?/gi, '').replace(/[\s ]/g, '').replace(',', '.').trim();
-  const value = Number.parseFloat(cleaned);
-  return Number.isFinite(value) ? value : null;
-}
-
-function parseBool(raw) {
-  if (!raw) return false;
-  return /^(так|yes|true|1|\+)$/i.test(raw.trim());
-}
-
-const TRANSLIT = {
-  а: 'a', б: 'b', в: 'v', г: 'h', ґ: 'g', д: 'd', е: 'e', є: 'ie', ж: 'zh', з: 'z',
-  и: 'y', і: 'i', ї: 'i', й: 'i', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p',
-  р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh',
-  щ: 'shch', ь: '', ю: 'iu', я: 'ia', ы: 'y', э: 'e', ъ: '',
-};
-
-function slugify(input) {
-  const translit = input.toLowerCase().split('').map((ch) => TRANSLIT[ch] ?? ch).join('');
-  return translit.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/-{2,}/g, '-');
-}
-
-function tireSlug(row) {
-  return slugify([row.brand, row.model, row.width, row.profile, row.diameter && `r${row.diameter}`, row.season].filter(Boolean).join('-'));
-}
-
-function wheelSlug(row) {
-  return slugify(
-    [row.brand, row.model, row.diameter && `r${row.diameter}`, row.width && `j${row.width}`, row.pcd && `pcd${row.pcd}`, row.et && `et${row.et}`]
-      .filter(Boolean)
-      .join('-')
-  );
-}
-
-function dedupeSlugs(rows, slugOf) {
-  const counts = new Map();
-  return rows.map((row) => {
-    const base = slugOf(row);
-    // Порожній slug (усі колонки-ідентифікатори порожні) — не URL: повертаємо '', викликач
-    // такий рядок пропускає. Та сама поведінка в src/js/slug.ts.
-    if (!base) return '';
-    const seen = counts.get(base) ?? 0;
-    counts.set(base, seen + 1);
-    if (seen > 0) console.warn(`generate-product-pages: колізія slug "${base}" — застосовано суфікс -${seen + 1}`);
-    return seen === 0 ? base : `${base}-${seen + 1}`;
-  });
-}
-
-function escapeHtml(value) {
-  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function escapeAttr(value) {
-  return escapeHtml(value).replace(/"/g, '&quot;');
 }
 
 /** Значення підставляється функцією-замінником, а не рядком: у рядку-заміні `$&`, `` $` ``, `$'`,

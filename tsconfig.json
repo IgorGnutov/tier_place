@@ -7,6 +7,11 @@
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    // src/shared/*.mjs — плейн-ESM, спільний для клієнта і білд-скриптів (Node 20 у CI не
+    // читає .ts). checkJs лишається false: strict-перевірка плейн-JS дала б шум без користі,
+    // типи публічних функцій описані JSDoc-ом.
+    "allowJs": true,
+    "checkJs": false,
     "isolatedModules": true,
     "noEmit": true,
     "strict": true,

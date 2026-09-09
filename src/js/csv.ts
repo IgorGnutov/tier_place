@@ -17,19 +17,7 @@ export function parseCsv(text: string): CsvRow[] {
   return result.data.filter((row) => Object.values(row).some((v) => v !== ''));
 }
 
-// Нормалізація ціни: прибирає пробіли, "грн", коми як роздільник тисяч.
-export function parsePrice(raw: string | undefined): number | null {
-  if (!raw) return null;
-  const cleaned = raw
-    .replace(/грн\.?/gi, '')
-    .replace(/[\s ]/g, '')
-    .replace(',', '.')
-    .trim();
-  const value = Number.parseFloat(cleaned);
-  return Number.isFinite(value) ? value : null;
-}
-
-export function parseBool(raw: string | undefined): boolean {
-  if (!raw) return false;
-  return /^(так|yes|true|1|\+)$/i.test(raw.trim());
-}
+// parsePrice/parseBool живуть у src/shared/csv-values.mjs — їх потребує і
+// src/shared/describe.mjs, який імпортує плейн-Node. Тут лише реекспорт, щоб решта
+// клієнтського коду й далі імпортувала їх звідси.
+export { parsePrice, parseBool } from '../shared/csv-values.mjs';

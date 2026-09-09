@@ -15,10 +15,9 @@ import { showToast } from './telegram';
 import { addItem } from './cart';
 import { getProductImageManifest, type ProductImageSet } from './product-images';
 import { t, onLangChange } from './i18n';
-import { dedupeSlugs, tireSlug, wheelSlug } from './slug';
+import { dedupeSlugs, tireSlug, wheelSlug } from '../shared/slug.mjs';
 import { SHEET_TIRES_CSV, SHEET_WHEELS_CSV } from '../config';
-
-const PAGE_SIZE = 9;
+import { PAGE_SIZE } from '../shared/constants.mjs';
 
 interface CardInfo {
   title: string;

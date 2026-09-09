@@ -2,6 +2,7 @@
 // доступними з урахуванням уже обраних значень інших полів.
 import type { CsvRow } from './csv';
 import { parseBool } from './csv';
+import { normalizeValue } from '../shared/normalize.mjs';
 import { t } from './i18n';
 
 export interface FieldDef {
@@ -14,7 +15,9 @@ export type FilterState = Record<string, string>;
 
 function fieldValue(row: CsvRow, field: FieldDef): string {
   if (field.boolean) return parseBool(row[field.key]) ? 'true' : 'false';
-  return (row[field.key] ?? '').trim();
+  // Канонізація в одному місці: без неї в селекті "Діаметр" з'являлись два пункти-двійники
+  // (16C з латинською C і 16С з кириличною) — див. src/shared/normalize.mjs.
+  return normalizeValue(field.key, row[field.key] ?? '');
 }
 
 function fieldDisplay(field: FieldDef, value: string): string {
