@@ -3,17 +3,6 @@
   padding-block: var(--space-xl);
 }
 
-.product-detail__back {
-  display: inline-block;
-  margin-bottom: var(--space-md);
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.product-detail__back:hover {
-  color: var(--color-accent);
-}
-
 .product-detail__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

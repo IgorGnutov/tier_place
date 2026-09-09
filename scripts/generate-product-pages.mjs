@@ -7,6 +7,7 @@
 // Дублікатів більше немає.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../src/shared/slug.mjs';
+import { listFacetPages, facetForProduct } from '../src/shared/clusters.mjs';
 import { describeTire, describeWheel } from '../src/shared/describe.mjs';
 import {
   replaceAttr,
@@ -28,6 +29,10 @@ import { SITE_URL } from '../src/shared/constants.mjs';
 /** Сторінки товару існують лише українською (RU-версії — фаза 2), тож переклад тривіальний.
  *  @type {import('../src/shared/describe.mjs').Translate} */
 const t = (_key, uk) => uk;
+
+// Фасетні сторінки потрібні тут для крихт: середня ланка мусить вести на ДОКУМЕНТ
+// (/tires/ і, де є, /tires/r16/), а не на якір головної.
+const FACET_PAGES = listFacetPages(JSON.parse(readFileSync(`${root}src/data/clusters.json`, 'utf8')));
 
 function buildPhotoHtml(product, imageSet) {
   if (!product.imageUrl) return `<div class="product-detail__photo--placeholder">Фото немає</div>`;
@@ -146,13 +151,43 @@ function buildReviewsHtml(product) {
       </section>`;
 }
 
+/**
+ * Ланки крихт товару: Головна → Шини → [R16] → назва. Ланка фасета присутня лише якщо для
+ * товару є відповідна закріплена фасетна сторінка (див. src/data/clusters.json).
+ * @param {object} product
+ * @returns {{ name: string, href: string | null }[]}
+ */
+function productCrumbs(product) {
+  const catalogName = product.kind === 'tires' ? 'Шини' : 'Диски';
+  const crumbs = [
+    { name: 'Головна', href: '/' },
+    { name: catalogName, href: `/${product.kind}/` },
+  ];
+  const facet = facetForProduct(product.row, product.kind, FACET_PAGES);
+  if (facet) crumbs.push({ name: facet.label, href: `/${facet.path}/` });
+  crumbs.push({ name: product.title, href: null });
+  return crumbs;
+}
+
+/** Ті самі стилі, що на кластерних сторінках (src/styles/cluster.css). */
+function breadcrumbsHtml(crumbs) {
+  const items = crumbs
+    .map((c) =>
+      c.href
+        ? `<li><a href="${escapeAttr(c.href)}">${escapeHtml(c.name)}</a></li>`
+        : `<li aria-current="page">${escapeHtml(c.name)}</li>`
+    )
+    .join('');
+  return `<nav class="breadcrumbs" aria-label="Навігація по сайту"><ol>${items}</ol></nav>`;
+}
+
 function buildMainHtml(product, imageSet) {
   const photoHtml = buildPhotoHtml(product, imageSet);
   const specsHtml = product.specs.map((s) => `<li>${escapeHtml(s.label)}: ${escapeHtml(s.value)}</li>`).join('');
   const statusClass = product.inStock ? 'status--in' : 'status--out';
   const statusText = product.inStock ? 'В наявності' : 'Немає в наявності';
   const priceText = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'Ціна за запитом';
-  const backHref = product.kind === 'tires' ? '/#tires' : '/#wheels';
+
   const productData = jsonForScript({
     id: product.productId,
     key: product.key,
@@ -166,7 +201,7 @@ function buildMainHtml(product, imageSet) {
 
   return `
     <div class="container product-detail">
-      <a class="product-detail__back" href="${backHref}">← Назад до каталогу</a>
+      ${breadcrumbsHtml(product.crumbs)}
       <div class="product-detail__grid">
         <div class="product-detail__photo">${photoHtml}</div>
         <div class="product-detail__body">
@@ -185,7 +220,7 @@ function buildMainHtml(product, imageSet) {
 }
 
 function buildProductPage(product, baseHtml, imageSet) {
-  const pageUrl = `https://tire-place.com.ua/${product.kind}/${product.slug}/`;
+  const pageUrl = `${SITE_URL}/${product.kind}/${product.slug}/`;
   const metaTitle = `${product.title} — купити в TIRE PLACE, Кривий Ріг`;
   const priceLine = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'ціна за запитом';
   // У шин title уже закінчується розміром ("... 195/65 R15") — без цієї перевірки опис виходив
@@ -196,7 +231,7 @@ function buildProductPage(product, baseHtml, imageSet) {
   } в автомагазині TIRE PLACE, Кривий Ріг.`;
   // Соцмережі краще тягнути з власного домену (стабільніше, ніж покладатись, що postimg.cc
   // лишиться доступним для скрапера) — беремо JPEG-варіант, якщо фото вдалось оптимізувати.
-  const ogImageUrl = imageSet?.jpg ? `https://tire-place.com.ua${imageSet.jpg}` : product.imageUrl;
+  const ogImageUrl = imageSet?.jpg ? `${SITE_URL}${imageSet.jpg}` : product.imageUrl;
 
   let html = baseHtml;
   html = replaceMain(html, buildMainHtml(product, imageSet), 'generate-product-pages');
@@ -295,16 +330,18 @@ function buildProductPage(product, baseHtml, imageSet) {
         }))
       : undefined,
   };
-  const catalogName = product.kind === 'tires' ? 'Шини' : 'Диски';
-  const catalogUrl = `https://tire-place.com.ua/${product.kind === 'tires' ? '#tires' : '#wheels'}`;
+  // Було: середня ланка вела на "https://tire-place.com.ua/#tires" — якір головної, тобто не
+  // документ. Стало: хаб /tires/ і, якщо для товару є закріплений фасет, ще й /tires/r16/.
+  // Перелік той самий, що видимий у крихтах на сторінці — цього прямо вимагає Google.
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Головна', item: 'https://tire-place.com.ua/' },
-      { '@type': 'ListItem', position: 2, name: catalogName, item: catalogUrl },
-      { '@type': 'ListItem', position: 3, name: product.title, item: pageUrl },
-    ],
+    itemListElement: product.crumbs.map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: c.name,
+      item: c.href ? `${SITE_URL}${c.href}` : pageUrl,
+    })),
   };
   const headScripts =
     `  <script type="application/ld+json">${jsonForScript(productJsonLd)}</script>\n` +
@@ -422,8 +459,8 @@ function loadProducts() {
   // productId читається тут, а не в describeTire/describeWheel: колонка "id" потрібна лише
   // цьому скрипту (привʼязка відгуків), клієнтському каталогу — ні.
   const products = [
-    ...data.tires.map((row, i) => ({ ...describeTire(row, t), kind: 'tires', slug: tireSlugs[i], productId: (row.id ?? '').trim() })),
-    ...data.wheels.map((row, i) => ({ ...describeWheel(row, t), kind: 'wheels', slug: wheelSlugs[i], productId: (row.id ?? '').trim() })),
+    ...data.tires.map((row, i) => ({ ...describeTire(row, t), kind: 'tires', slug: tireSlugs[i], productId: (row.id ?? '').trim(), row })),
+    ...data.wheels.map((row, i) => ({ ...describeWheel(row, t), kind: 'wheels', slug: wheelSlugs[i], productId: (row.id ?? '').trim(), row })),
   ].filter((product) => {
     // Порожній slug = усі колонки-ідентифікатори рядка порожні. Такий товар дав би URL
     // "/tires//" і перезаписав би dist/tires/index.html — пропускаємо повністю.
@@ -435,6 +472,7 @@ function loadProducts() {
   });
 
   attachReviews(products, groupReviews(data.reviews));
+  for (const product of products) product.crumbs = productCrumbs(product);
   return products;
 }
 
