@@ -8,7 +8,19 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../src/shared/slug.mjs';
 import { describeTire, describeWheel } from '../src/shared/describe.mjs';
-import { escapeHtml, escapeAttr } from '../src/shared/html-escape.mjs';
+import {
+  replaceAttr,
+  removeAll,
+  removeJsonLd,
+  jsonForScript,
+  replaceMain,
+  stripI18nHooks,
+  rootifyNavAnchors,
+  rootifyAssetPaths,
+  removeHeroPreload,
+  escapeHtml,
+  escapeAttr,
+} from './lib/html-patch.mjs';
 import { root, readBuildJson } from './lib/build-dir.mjs';
 import { appendUrls } from './lib/urls.mjs';
 import { SITE_URL } from '../src/shared/constants.mjs';
@@ -16,57 +28,6 @@ import { SITE_URL } from '../src/shared/constants.mjs';
 /** Сторінки товару існують лише українською (RU-версії — фаза 2), тож переклад тривіальний.
  *  @type {import('../src/shared/describe.mjs').Translate} */
 const t = (_key, uk) => uk;
-
-/** Значення підставляється функцією-замінником, а не рядком: у рядку-заміні `$&`, `` $` ``, `$'`,
- *  `$1` мають спеціальне значення, тож назва товару з `$&` зіпсувала б результат. */
-function replaceAttr(source, matchPrefix, value) {
-  const re = new RegExp(`(${matchPrefix})[^"]*(")`);
-  if (!re.test(source)) throw new Error(`generate-product-pages: pattern not found — ${matchPrefix}`);
-  const escaped = escapeAttr(value);
-  return source.replace(re, (_match, before, after) => `${before}${escaped}${after}`);
-}
-
-/** Обов'язкове видалення фрагмента: якщо шаблон не знайдено — це дрейф index.html, і краще
- *  впасти на білді, ніж мовчки залишити на сторінці товару чужий тег. */
-function removeAll(source, re, label) {
-  if (!re.test(source)) throw new Error(`generate-product-pages: не знайдено для видалення — ${label}`);
-  re.lastIndex = 0;
-  return source.replace(re, '');
-}
-
-// Один блок JSON-LD разом із коментарем-заголовком перед ним (у head вони йдуть саме так).
-const JSON_LD_BLOCK_RE = /[ \t]*(?:<!--[^\r\n]*-->[ \t]*\r?\n[ \t]*)?<script type="application\/ld\+json">[\s\S]*?<\/script>[ \t]*\r?\n?/g;
-
-/** Прибирає JSON-LD блоки з переліченими @type. Google очікує, що розмічений контент реально
- *  присутній на сторінці — Service/FAQPage/BreadcrumbList головної на сторінці товару зайві. */
-function removeJsonLd(html, types) {
-  const removed = new Set();
-  const out = html.replace(JSON_LD_BLOCK_RE, (block) => {
-    const match = /"@type"\s*:\s*"([^"]+)"/.exec(block);
-    if (match && types.includes(match[1])) {
-      removed.add(match[1]);
-      return '';
-    }
-    return block;
-  });
-  for (const type of types) {
-    if (!removed.has(type)) throw new Error(`generate-product-pages: JSON-LD блок "${type}" не знайдено в dist/index.html`);
-  }
-  return out;
-}
-
-/** `<` екранується, щоб рядок із таблиці (напр. "</script>") не міг закрити наш <script>. */
-function jsonForScript(value) {
-  return JSON.stringify(value).replace(/</g, '\\u003c');
-}
-
-function replaceMain(html, mainInnerHtml) {
-  const startTag = '<main id="main">';
-  const start = html.indexOf(startTag);
-  const end = html.indexOf('</main>', start);
-  if (start === -1 || end === -1) throw new Error('generate-product-pages: <main id="main"> not found in dist/index.html');
-  return html.slice(0, start + startTag.length) + mainInnerHtml + html.slice(end);
-}
 
 function buildPhotoHtml(product, imageSet) {
   if (!product.imageUrl) return `<div class="product-detail__photo--placeholder">Фото немає</div>`;
@@ -238,32 +199,30 @@ function buildProductPage(product, baseHtml, imageSet) {
   const ogImageUrl = imageSet?.jpg ? `https://tire-place.com.ua${imageSet.jpg}` : product.imageUrl;
 
   let html = baseHtml;
-  html = replaceMain(html, buildMainHtml(product, imageSet));
+  html = replaceMain(html, buildMainHtml(product, imageSet), 'generate-product-pages');
   html = html.replace(/<title[^>]*>[^<]*<\/title>/, () => `<title>${escapeHtml(metaTitle)}</title>`);
-  html = replaceAttr(html, '<meta name="description"[^>]*content="', metaDescription);
-  html = replaceAttr(html, '<link rel="canonical" id="canonical-link" href="', pageUrl);
-  html = replaceAttr(html, '<meta property="og:title" content="', metaTitle);
-  html = replaceAttr(html, '<meta property="og:description" content="', metaDescription);
-  html = replaceAttr(html, '<meta property="og:url" id="og-url-meta" content="', pageUrl);
-  html = replaceAttr(html, '<meta name="twitter:title" content="', metaTitle);
-  html = replaceAttr(html, '<meta name="twitter:description" content="', metaDescription);
+  html = replaceAttr(html, '<meta name="description"[^>]*content="', metaDescription, 'generate-product-pages');
+  html = replaceAttr(html, '<link rel="canonical" id="canonical-link" href="', pageUrl, 'generate-product-pages');
+  html = replaceAttr(html, '<meta property="og:title" content="', metaTitle, 'generate-product-pages');
+  html = replaceAttr(html, '<meta property="og:description" content="', metaDescription, 'generate-product-pages');
+  html = replaceAttr(html, '<meta property="og:url" id="og-url-meta" content="', pageUrl, 'generate-product-pages');
+  html = replaceAttr(html, '<meta name="twitter:title" content="', metaTitle, 'generate-product-pages');
+  html = replaceAttr(html, '<meta name="twitter:description" content="', metaDescription, 'generate-product-pages');
   if (ogImageUrl) {
-    html = replaceAttr(html, '<meta property="og:image" content="', ogImageUrl);
-    html = replaceAttr(html, '<meta name="twitter:image" content="', ogImageUrl);
+    html = replaceAttr(html, '<meta property="og:image" content="', ogImageUrl, 'generate-product-pages');
+    html = replaceAttr(html, '<meta name="twitter:image" content="', ogImageUrl, 'generate-product-pages');
     // Розміри 1200×900 стосувались фото вивіски з головної — до фото товару вони не підходять.
-    html = removeAll(html, /[ \t]*<meta property="og:image:(?:width|height)" content="\d+" \/>[ \t]*\r?\n?/g, 'og:image:width/height');
+    html = removeAll(html, /[ \t]*<meta property="og:image:(?:width|height)" content="\d+" \/>[ \t]*\r?\n?/g, 'og:image:width/height', 'generate-product-pages');
   }
 
   // main.js (i18n.ts) під час старту перезаписує #canonical-link/#og-url-meta на URL головної,
   // а applyStaticTranslations() — усі теги з data-i18n/data-i18n-attr="content:meta.*" на
   // RU-рядки головної. Обидва пошуки мають нічого не знайти на сторінці товару, інакше
   // побудовані тут SEO-теги зникають одразу після виконання JS (у DOM, який індексує Google).
-  html = removeAll(html, / id="canonical-link"/g, 'id="canonical-link"');
-  html = removeAll(html, / id="og-url-meta"/g, 'id="og-url-meta"');
-  html = removeAll(html, / data-i18n-attr="content:meta\.[A-Za-z]+"/g, 'data-i18n-attr="content:meta.*"');
+  html = stripI18nHooks(html, 'generate-product-pages');
   // Перемикач мови: без data-lang-link клік — звичайний перехід за href ("/" або "/ru/"),
   // а не JS-підміна контенту поточної сторінки. RU-версії сторінки товару немає.
-  html = removeAll(html, / data-lang-link="(?:uk|ru)"/g, 'data-lang-link');
+  html = removeAll(html, / data-lang-link="(?:uk|ru)"/g, 'data-lang-link', 'generate-product-pages');
   html = html.replace('<a href="/" class="lang-switch__link"', () => '<a href="/" class="lang-switch__link is-active"');
 
   // Немає RU-версії сторінки товару (поза межами цієї задачі) — прибираємо hreflang-альтернативи
@@ -273,15 +232,11 @@ function buildProductPage(product, baseHtml, imageSet) {
 
   // Preload LCP-фото hero-слайдера: hero на сторінці товару немає (<main> замінено) — це був би
   // зайвий високопріоритетний запит, що конкурує з фото самого товару.
-  html = removeAll(
-    html,
-    /[ \t]*(?:<!--[^\n]*-->[ \t]*\r?\n[ \t]*)?<link\r?\n[ \t]*rel="preload"[\s\S]*?\/>\r?\n?/g,
-    '<link rel="preload" as="image">'
-  );
+  html = removeHeroPreload(html, 'generate-product-pages');
 
   // Service/FAQPage/BreadcrumbList головної описують контент, якого на цій сторінці немає.
   // AutoPartsStore лишається — це загальносайтова інформація про бізнес.
-  html = removeJsonLd(html, ['Service', 'FAQPage', 'BreadcrumbList']);
+  html = removeJsonLd(html, ['Service', 'FAQPage', 'BreadcrumbList'], 'generate-product-pages');
 
   // Агрегат рахується рівно по тих відгуках, що видимі на сторінці — цього прямо вимагає Google
   // (розмічений контент має бути присутній для користувача). Обидва поля або є разом з видимим
@@ -359,14 +314,12 @@ function buildProductPage(product, baseHtml, imageSet) {
   // Пункти меню/футера ведуть на секції головної — на сторінці товару голий хеш (#tires) нікуди
   // не веде. Кореневий /#tires працює звідусіль; заодно селектор a[data-nav-link][href="#wheels"]
   // з render-products.ts перестає збігатись, тож його preventDefault більше не перехоплює клік.
-  html = html.replace(/href="#([a-z-]+)" data-nav-link/g, 'href="/#$1" data-nav-link');
+  html = rootifyNavAnchors(html);
 
   // Сторінка лежить на 2 рівні глибше dist/index.html — переписуємо відносні шляхи на кореневі
   // (той самий прийом, що вже застосований у generate-ru-html.mjs для /ru/; кореневий шлях
   // резолвиться однаково незалежно від глибини поточної сторінки).
-  html = html.replace(/="\.\//g, '="/');
-  html = html.replace(/"assets\//g, '"/assets/');
-  html = html.replace(/, assets\//g, ', /assets/');
+  html = rootifyAssetPaths(html);
 
   return { html, ogImageUrl };
 }

@@ -113,5 +113,14 @@
   "a11y.mainNavAria": "Основная навигация",
   "a11y.telegramFloatingAria": "Написать нам в Telegram",
   "a11y.langSwitchAria": "Язык сайта",
-  "a11y.heroDotsAria": "Выбор слайда"
+  "a11y.heroDotsAria": "Выбор слайда",
+  "breadcrumbs.aria": "Навигация по сайту",
+  "breadcrumbs.home": "Главная",
+  "cluster.byDiameter": "Шины по диаметру",
+  "cluster.catalogRow": "Каталог",
+  "cluster.servicesRow": "Услуги",
+  "cluster.linksAria": "Разделы каталога и услуг",
+  "facet.empty": "Сейчас нет в наличии",
+  "facet.emptyHint": "Этот размер закончился. Посмотрите соседние размеры выше или напишите нам — привезём под заказ.",
+  "cta.write": "Написать нам в Telegram"
 }

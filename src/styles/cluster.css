@@ -1,0 +1,151 @@
+/* Кластерні сторінки (хаби /tires/, фасети /tires/r16/, сторінки послуг) і крихти, які
+   з'явились заодно на сторінках товару. Розмітку цих сторінок будує
+   scripts/generate-cluster-pages.mjs, каталог у них — вирізана панель із головної, тож усі
+   стилі фільтрів/карток беруться з products.css без змін. */
+
+.breadcrumbs {
+  padding-top: var(--space-md);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumbs li + li::before {
+  content: '/';
+  margin-right: 0.35em;
+  color: var(--color-border-strong);
+}
+
+.breadcrumbs a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+  color: var(--color-accent);
+}
+
+.breadcrumbs [aria-current='page'] {
+  color: var(--color-text);
+}
+
+.cluster-page {
+  padding-bottom: var(--space-xl);
+}
+
+.cluster-page__title {
+  margin: var(--space-sm) 0 var(--space-md);
+  font-size: var(--fs-h1);
+}
+
+.cluster-page__intro {
+  max-width: 72ch;
+  margin-bottom: var(--space-lg);
+  color: var(--color-text-muted);
+}
+
+.cluster-page__intro p + p {
+  margin-top: var(--space-sm);
+}
+
+.cluster-page__intro strong {
+  color: var(--color-text);
+}
+
+.cluster-page__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+/* Блок перелінковки — головний інструмент, що веде Google з головної у фасет і між
+   фасетами. Саме він, а не збільшення кількості карток у гріді. */
+.cluster-links {
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--color-bg-raised);
+  background-image: var(--gradient-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.cluster-links__row + .cluster-links__row {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.cluster-links__label {
+  margin: 0 0 var(--space-xs);
+  font-family: var(--font-heading);
+  font-size: var(--fs-small);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.cluster-links ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cluster-links a,
+.cluster-links strong {
+  display: inline-block;
+  min-height: 36px;
+  padding: 0.4em 0.9em;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+}
+
+.cluster-links a {
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.cluster-links a:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Поточна сторінка — не посилання: фасет, що лінкує сам на себе, лише розмиває вагу. */
+.cluster-links strong {
+  background: var(--gradient-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-weight: 600;
+}
+
+/* Фасет, що лишився з нульовим залишком: сторінка й далі віддається з HTTP 200, бо URL
+   закріплений у clusters.json і вже може бути в індексі. */
+.cluster-empty__hint {
+  max-width: 60ch;
+  margin-top: var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.cluster-faq {
+  margin-top: var(--space-lg);
+}
+
+.cluster-faq h2 {
+  margin-bottom: var(--space-md);
+  font-size: var(--fs-h2);
+}
