@@ -103,12 +103,22 @@ export function readRangeFromUrl(prefix: string): { min: string; max: string } {
   };
 }
 
+/** На фасетній сторінці (/tires/r16/) фасет підставляється як початковий стан фільтра.
+ *  Щоб знятий користувачем фасет не повертався після перезавантаження — а шароване посилання
+ *  показувало саме те, що бачив користувач — знімання фіксується параметром
+ *  `<prefix>_facet=off`. Сам canonical при цьому не змінюється: це той самий документ з іншим
+ *  станом фільтра. */
+export function isFacetOff(prefix: string): boolean {
+  return new URLSearchParams(window.location.search).get(`${prefix}_facet`) === 'off';
+}
+
 export function writeStateToUrl(
   prefix: string,
   fields: FieldDef[],
   state: FilterState,
   priceMin: string,
-  priceMax: string
+  priceMax: string,
+  facetOff = false
 ): void {
   const params = new URLSearchParams(window.location.search);
   // Спершу прибираємо всі старі параметри цього каталогу.
@@ -121,6 +131,7 @@ export function writeStateToUrl(
   });
   if (priceMin) params.set(`${prefix}_min`, priceMin);
   if (priceMax) params.set(`${prefix}_max`, priceMax);
+  if (facetOff) params.set(`${prefix}_facet`, 'off');
 
   const query = params.toString();
   const newUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;

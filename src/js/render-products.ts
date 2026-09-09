@@ -4,6 +4,7 @@ import { loadLiveCsv } from './sheets';
 import { type CsvRow } from './csv';
 import {
   filterRows,
+  isFacetOff,
   optionsForField,
   readRangeFromUrl,
   readStateFromUrl,
@@ -115,7 +116,15 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
     // лишається без посилання (див. productCardHtml).
     rows[i].__detailUrl = slug ? `/${idPrefix}/${slug}/` : '';
   });
+  // Фасетна сторінка (/tires/r16/) віддає фасет у розмітці: initCatalog стартує з ним як
+  // початковим станом фільтра, показує його в чипсах — і дозволяє зняти. URL-параметри мають
+  // пріоритет, щоб шароване посилання показувало рівно те, що в ньому написано.
+  const facetField = form.dataset.facetField ?? '';
+  const facetValue = form.dataset.facetValue ?? '';
   let state: FilterState = readStateFromUrl(idPrefix, fields);
+  if (facetField && facetValue && !isFacetOff(idPrefix) && !state[facetField]) {
+    state[facetField] = facetValue;
+  }
   const range = readRangeFromUrl(idPrefix);
   let visibleCount = PAGE_SIZE;
 
@@ -238,7 +247,9 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
     buildSelects();
     renderChips();
     renderResults();
-    writeStateToUrl(idPrefix, fields, state, priceMinInput?.value ?? '', priceMaxInput?.value ?? '');
+    // facetOff — щоб знятий фасет не повернувся після перезавантаження сторінки.
+    const facetOff = Boolean(facetField) && !state[facetField];
+    writeStateToUrl(idPrefix, fields, state, priceMinInput?.value ?? '', priceMaxInput?.value ?? '', facetOff);
   }
 
   fields.forEach((field) => {
