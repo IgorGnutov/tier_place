@@ -15,6 +15,7 @@ import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs'
 import { root, readBuildJson } from './lib/build-dir.mjs';
 import { appendUrls } from './lib/urls.mjs';
 import { clusterLinksHtml, clusters, pageTexts, CONTENT_PAGE_KEYS, langPrefix } from './lib/cluster-links.mjs';
+import { makeT } from './lib/i18n.mjs';
 import { SITE_URL, PAGE_SIZE } from '../src/shared/constants.mjs';
 import { describeTire, describeWheel, catalogLabel } from '../src/shared/describe.mjs';
 import { productCardHtml } from '../src/shared/product-card.mjs';
@@ -46,26 +47,30 @@ const LANGS = ['uk', 'ru'];
 const data = readBuildJson('data.json', 'scripts/fetch-data.mjs');
 const images = readBuildJson('images.json', 'scripts/build-product-images.mjs');
 
-// RU-рядки з тих самих JSON, що їх імпортує клієнт і generate-ru-html.mjs — щоб ярлики
-// карток («В наличии», «Купить») і крихт не розходились з клієнтським i18n.
-const RU_STRINGS = {
-  ...JSON.parse(readFileSync(`${root}src/i18n/ru.json`, 'utf8')),
-  ...JSON.parse(readFileSync(`${root}src/i18n/ru-meta.json`, 'utf8')),
-};
-
-/** @param {string} lang @returns {import('../src/shared/describe.mjs').Translate} */
-const makeT = (lang) => (lang === 'ru' ? (key, uk) => RU_STRINGS[key] ?? uk : (_key, uk) => uk);
-
 // ---------------------------------------------------------------- дані товарів
 
-/** Рядки прайсу з проставленим __detailUrl — той самий формат, що бачить клієнт. */
-function rowsWithDetailUrls(kind) {
+/**
+ * Рядки прайсу з проставленим __detailUrl — той самий формат, що бачить клієнт.
+ * Префікс мови обовʼязковий: RU-фасет мусить вести на RU-сторінку товару, інакше клік із
+ * /ru/tires/r16/ відкривав би українську сторінку (мова визначається виключно зі шляху).
+ * @param {'tires'|'wheels'} kind @param {string} lang
+ */
+function rowsWithDetailUrls(kind, lang) {
   const rows = kind === 'tires' ? data.tires : data.wheels;
   const slugs = dedupeSlugs(rows, kind === 'tires' ? tireSlug : wheelSlug);
-  return rows.map((row, i) => ({ ...row, __detailUrl: slugs[i] ? `/${kind}/${slugs[i]}/` : '' }));
+  return rows.map((row, i) => ({
+    ...row,
+    __detailUrl: slugs[i] ? `${langPrefix(lang)}/${kind}/${slugs[i]}/` : '',
+  }));
 }
 
-const ROWS = { tires: rowsWithDetailUrls('tires'), wheels: rowsWithDetailUrls('wheels') };
+/** ROWS[lang][kind] — слаги однакові в обох мовах, різниться лише префікс у __detailUrl. */
+const ROWS = Object.fromEntries(
+  LANGS.map((lang) => [
+    lang,
+    { tires: rowsWithDetailUrls('tires', lang), wheels: rowsWithDetailUrls('wheels', lang) },
+  ])
+);
 const describeFor = { tires: describeTire, wheels: describeWheel };
 
 // ---------------------------------------------------------------- вирізання каталогу з оболонки
@@ -218,7 +223,8 @@ function buildMainHtml(page, text, lang, t, crumbs) {
   ];
 
   if (page.type === 'hub' || page.type === 'facet') {
-    const rows = page.type === 'facet' ? rowsForFacet(ROWS[page.kind], page.field, page.value) : ROWS[page.kind];
+    const langRows = ROWS[lang][page.kind];
+    const rows = page.type === 'facet' ? rowsForFacet(langRows, page.field, page.value) : langRows;
     const shellPanel = extractCatalogPanel(page.shell, page.kind);
     parts.push(
       fillCatalogPanel(shellPanel, page.kind, rows, t, page.type === 'facet' ? { field: page.field, value: page.value } : null)
@@ -261,7 +267,7 @@ function buildPage(page, lang) {
   let html = replaceMain(page.shell, buildMainHtml(page, text, lang, t, crumbs), LABEL);
 
   html = html.replace(/<title[^>]*>[^<]*<\/title>/, () => `<title>${escapeHtml(text.title)}</title>`);
-  html = replaceAttr(html, '<meta name="description"[^>]*content="', text.description, LABEL);
+  html = replaceAttr(html, '<meta name="description"[^>]*?content="', text.description, LABEL);
   html = replaceAttr(html, '<link rel="canonical" id="canonical-link" href="', pageUrl, LABEL);
   html = replaceAttr(html, '<meta property="og:title" content="', text.title, LABEL);
   html = replaceAttr(html, '<meta property="og:description" content="', text.description, LABEL);
@@ -365,8 +371,9 @@ function main() {
 
   // Слаги фасетів і товарів живуть в одному просторі імен — колізія мусить валити білд.
   const products = [
-    ...ROWS.tires.map((row) => ({ kind: 'tires', slug: row.__detailUrl.split('/')[2] ?? '', title: describeTire(row, makeT('uk')).title })),
-    ...ROWS.wheels.map((row) => ({ kind: 'wheels', slug: row.__detailUrl.split('/')[2] ?? '', title: describeWheel(row, makeT('uk')).title })),
+    // Слаги мовно-незалежні (рахуються з даних прайсу), тож перевіряти достатньо один набір.
+    ...ROWS.uk.tires.map((row) => ({ kind: 'tires', slug: row.__detailUrl.split('/')[2] ?? '', title: describeTire(row, makeT('uk')).title })),
+    ...ROWS.uk.wheels.map((row) => ({ kind: 'wheels', slug: row.__detailUrl.split('/')[2] ?? '', title: describeWheel(row, makeT('uk')).title })),
   ].filter((p) => p.slug);
   assertNoSlugCollisions(facetPages, products);
 

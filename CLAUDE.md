@@ -33,7 +33,7 @@ There is no linter configured either.
 2. node scripts/fetch-data.mjs               → .build/data.json      (ФАТАЛЬНО при помилці)
 3. node scripts/build-product-images.mjs     → dist/data/product-images.json + .build/images.json
 4. node scripts/generate-ru-html.mjs         → dist/ru/index.html    (RU-оболонка)
-5. node scripts/generate-product-pages.mjs   → dist/{tires,wheels}/<slug>/
+5. node scripts/generate-product-pages.mjs   → dist[/ru]/{tires,wheels}/<slug>/ (UA + RU)
 6. node scripts/generate-cluster-pages.mjs   → хаби, фасети, послуги (UA + RU)
 7. node scripts/prerender-home.mjs           → картки в dist/index.html і dist/ru/index.html
 8. node scripts/generate-sitemap.mjs         → dist/sitemap.xml
@@ -71,7 +71,8 @@ There is no linter configured either.
 | `clusters.mjs` | фасети, поріг, розкладка рядків, крихти, інваріанти |
 | `csv-values.mjs`, `html-escape.mjs` | `parsePrice`/`parseBool`, `escapeHtml`/`escapeAttr` |
 
-`scripts/lib/*.mjs` — те саме для скриптів між собою: `html-patch.mjs` (патч клонованого HTML),
+`scripts/lib/*.mjs` — те саме для скриптів між собою: `i18n.mjs` (`RU_STRINGS` + `makeT(lang)`,
+спільні для трьох генераторів), `html-patch.mjs` (патч клонованого HTML),
 `sheets.mjs`, `build-dir.mjs`, `urls.mjs`, `cluster-links.mjs`.
 
 **Data flow (Google Sheets → CSV → render):**
@@ -130,13 +131,28 @@ There is no linter configured either.
   order to a Telegram bot chat — see `README.md`, "Кошик і замовлення", for the bot setup steps
   and the sheet's exact column contract.
 
-**Product detail pages (`/tires/<slug>/`, `/wheels/<slug>/`) — generated at build time, not
-client-rendered:**
-- `scripts/generate-product-pages.mjs` (крок 5) читає `.build/data.json`, потім для кожного рядка
-  клонує вже зібраний `dist/index.html`, замінює вміст `<main id="main">` на розмітку товару,
-  патчить SEO-теги в `<head>` і пише `dist/<kind>/<slug>/index.html` — той самий прийом
-  clone-and-patch, що `scripts/generate-ru-html.mjs` для `/ru/`. Свої URL дописує в
-  `.build/urls.json` (крок 8 збирає sitemap). Dev-прев'ю цих сторінок немає.
+**Product detail pages (`/tires/<slug>/`, `/wheels/<slug>/` + RU-дзеркала під `/ru/`) —
+generated at build time, not client-rendered:**
+- `scripts/generate-product-pages.mjs` (крок 5) читає `.build/data.json` і на кожен рядок пише
+  **дві** сторінки: UA клонується з `dist/index.html`, RU — з **уже перекладеної**
+  `dist/ru/index.html` (звідси й порядок: крок 5 після 4, як і крок 6). Замінює вміст
+  `<main id="main">` на розмітку товару, патчить SEO-теги в `<head>` і пише
+  `dist[/ru]/<kind>/<slug>/index.html` — той самий прийом clone-and-patch, що
+  `scripts/generate-ru-html.mjs` для `/ru/`. Свої URL дописує в `.build/urls.json` (крок 8
+  збирає sitemap). Dev-прев'ю цих сторінок немає.
+- **Чому RU — окремий файл, а не клієнтський переклад:** мова визначається виключно зі шляху
+  (`getLang()` в `i18n.ts`), а згенерований `<main>` свідомо не має хуків `data-i18n` — їх би
+  перезаписала `applyStaticTranslations()`. Доки RU-сторінок не існувало, клік на товар із
+  `/ru/` відкривав повністю українську сторінку.
+- **Мовно-залежне в товарі — лише `specs` і `crumbs`.** Решта (`title`, `sizeLine`, `price`,
+  `slug`, `imageUrl`, `brand`) складається з даних прайсу й рахується один раз. `key` **мусить**
+  лишитись ідентичним в обох мовах: по ньому кошик зливає позиції, інакше той самий товар із
+  `/ru/tires/x/` і `/tires/x/` став би двома рядками. Значення з таблиці (`Тип: Литі`,
+  `Країна: Іспанія`) не перекладаються — перекладаються тільки ярлики.
+- **Посилання на товар мусить нести префікс мови**, і це три місця:
+  `src/js/render-products.ts` (всередині `renderResults()` — не один раз при старті, бо
+  `onLangChange` перемальовує грід після pushState-перемикання на головній),
+  `scripts/prerender-home.mjs` і `scripts/generate-cluster-pages.mjs`.
 - Фетч більше не тут: помилка завантаження таблиці — фатальна на **кроці 2**
   (`scripts/fetch-data.mjs`), до запису будь-яких файлів. Порожня, але доступна таблиця (0 рядків)
   — валідний стан, обробляється саме так за задумом.
@@ -144,7 +160,9 @@ client-rendered:**
   якщо для товару є закріплена фасетна сторінка (`facetForProduct` у `src/shared/clusters.mjs`; для
   R13/R20, у яких немає свого діаметра-фасета, підставляється сезонний). Раніше середня ланка вела
   на `https://tire-place.com.ua/#tires` — якір головної, а не документ. JSON-LD будується з того
-  самого переліку, що видимий на сторінці — цього прямо вимагає Google.
+  самого переліку, що видимий на сторінці — цього прямо вимагає Google. Ярлик ланки фасета
+  береться з `cluster-pages.json` (`linkLabel`), а **не** з `facetLabel()`: той віддає сире
+  значення прайсу («Зима», «Литі»), тобто українське навіть на RU-сторінці.
 - **Product photo optimization (`scripts/build-product-images.mjs`, крок 3):**
   product photos are arbitrary external URLs pasted into the sheet (postimg.cc etc. — see the CSP
   note above) and are never resized/compressed at the source. Public image-resize proxies
@@ -224,14 +242,17 @@ client-rendered:**
      Slug-формула нормалізацію **не** застосовує — 159 URL уже опубліковані.
   2. Слаги фасетів і товарів в одному просторі імен (`/tires/r16/` і `/tires/sailun-…-r16-zyma/`);
      `assertNoSlugCollisions` валить білд із назвами обох сторінок.
-- **`hreflang` тут переписується, а не зрізається** (на сторінках товару — навпаки): власна
-  взаємна пара `uk-UA`/`ru-UA`/`x-default`. Уся решта сайту теж на `uk-UA`/`ru-UA`; `<html lang>`
+- **`hreflang` переписується, а не зрізається** — і на кластерних сторінках, і на сторінках
+  товару: власна взаємна пара `uk-UA`/`ru-UA`/`x-default`. `og:locale:alternate` не чіпається
+  взагалі: обидві оболонки вже несуть правильне значення (`dist/index.html` → `ru_RU`,
+  `dist/ru/index.html` → `uk_UA`). Уся решта сайту теж на `uk-UA`/`ru-UA`; `<html lang>`
   свідомо лишається `uk`/`ru`, бо `i18n.ts` виставляє `document.documentElement.lang = getLang()`
   і розійшовся б із розміткою.
 - **Перемикач мови на цих сторінках — справжня навігація** `/tires/r16/` ↔ `/ru/tires/r16/`, а не
   JS-переклад на місці: текст живе в `cluster-pages.json`, якого клієнтський i18n не знає, тож він
-  залишив би опис російським на UA-сторінці. Наслідок, прийнятий свідомо: поведінка перемикача на
-  головній і на кластерних сторінках різна.
+  залишив би опис російським на UA-сторінці. Те саме на сторінках товару (`/tires/x/` ↔
+  `/ru/tires/x/`) — там текст живе в генераторі. Наслідок, прийнятий свідомо: перемикач
+  перекладає на місці **тільки** на головній, усюди інше — переходить.
 - **JSON-LD:** зрізаються `Service`/`FAQPage`/`BreadcrumbList` головної, лишається
   `AutoPartsStore`, додається власний `BreadcrumbList`; на сторінках послуг ще `Service` з
   `provider` і `areaServed: Кривий Ріг`. Свідомо **не** додаємо `FAQPage` (з серпня 2023 Google
@@ -278,6 +299,12 @@ reorder slides so a different photo becomes first, update both of those `index.h
   на перетині діапазонів (перекладений вузол усередині іншого перекладеного вузла) і падає, якщо
   якийсь прохід не переклав жодного вузла — інакше перейменований хук молча віддав би українську
   сторінку під RU-мета, тобто рівно той баг, який тут вилікували.
+- **Пастка кеш-атрибутів у `replaceAttr`:** RU-оболонка несе на кожному meta-тезі і `content=`,
+  і `data-i18n-orig-content=`. Шаблон із жадібним `[^>]*` (`<meta name="description"[^>]*content="`)
+  доїжджає до **останнього** `content="` у тезі, тобто підміняє кеш-атрибут, а видимий `content`
+  лишається описом головної — саме так усі RU-кластерні сторінки віддавали Google опис головної.
+  Шаблони мусять бути лінивими (`[^>]*?`); `assertAttrBoundary` у `scripts/lib/html-patch.mjs`
+  тепер валить білд, якщо збіг припав на середину імені атрибута.
 - `<h1>` віддано під ключовий запит («Шини та диски в Кривому Розі» / `hero.h1`), а назва бренду
   свідомо лишається поза `<h1>` — у `.hero__brand`. Не повертай бренд у `<h1>`.
 

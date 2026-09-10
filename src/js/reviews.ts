@@ -2,21 +2,34 @@
 // час білда, тут лише відправка. Відгук іде на той самий Apps Script Web App, що й замовлення,
 // зі статусом "Нове": на сайт він потрапляє лише після схвалення в /admin і наступної перебудови.
 import { CONTENT_API_URL } from '../config';
+import { t } from './i18n';
 
 const AUTHOR_MIN = 2;
 const AUTHOR_MAX = 60;
 const BODY_MIN = 10;
 const BODY_MAX = 1000;
 
+/** Підстановка меж у переклад. Числа не можна вбудовувати в самі рядки словника: вони мусять
+ *  лишатись синхронними з константами вище і з validateReview_ у Code.gs. */
+function fill(template: string, values: Record<string, number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) => String(values[key] ?? match));
+}
+
 // Дзеркалить validateReview_ у Code.gs, щоб людина побачила помилку без запиту. Справжня
 // перевірка — серверна: цю можна обійти запитом напряму на Web App.
 function validate(rating: string, author: string, body: string): string | null {
-  if (!rating) return 'Поставте оцінку';
+  if (!rating) return t('review.errNoRating', 'Поставте оцінку');
   if (author.length < AUTHOR_MIN || author.length > AUTHOR_MAX) {
-    return `Ім'я має бути від ${AUTHOR_MIN} до ${AUTHOR_MAX} символів`;
+    return fill(t('review.errAuthorLen', "Ім'я має бути від {min} до {max} символів"), {
+      min: AUTHOR_MIN,
+      max: AUTHOR_MAX,
+    });
   }
   if (body.length < BODY_MIN || body.length > BODY_MAX) {
-    return `Відгук має бути від ${BODY_MIN} до ${BODY_MAX} символів`;
+    return fill(t('review.errBodyLen', 'Відгук має бути від {min} до {max} символів'), {
+      min: BODY_MIN,
+      max: BODY_MAX,
+    });
   }
   return null;
 }
@@ -61,12 +74,12 @@ export function initReviews(): void {
     }
 
     if (!CONTENT_API_URL) {
-      setStatus('Відгуки ще не налаштовані на цьому сайті', true);
+      setStatus(t('review.errNotConfigured', 'Відгуки ще не налаштовані на цьому сайті'), true);
       return;
     }
 
     if (submitBtn) submitBtn.disabled = true;
-    setStatus('Надсилаємо…');
+    setStatus(t('review.sending', 'Надсилаємо…'));
 
     try {
       // body без явного Content-Type лишається text/plain — так Apps Script Web App уникає
@@ -89,7 +102,9 @@ export function initReviews(): void {
       const result = (await response.json()) as { ok: boolean; error?: string };
 
       if (!result.ok) {
-        setStatus(result.error || 'Не вдалося зберегти відгук', true);
+        // result.error приходить із Apps Script українською — перекладу там немає, тож fallback
+        // локалізований, а серверний текст показуємо як є.
+        setStatus(result.error || t('review.errSaveFallback', 'Не вдалося зберегти відгук'), true);
         if (submitBtn) submitBtn.disabled = false;
         return;
       }
@@ -98,9 +113,12 @@ export function initReviews(): void {
       form.querySelectorAll('input, textarea, button').forEach((el) => {
         (el as HTMLInputElement).disabled = true;
       });
-      setStatus('Дякуємо! Відгук з’явиться на сайті після перевірки.');
+      setStatus(t('review.thanks', 'Дякуємо! Відгук з’явиться на сайті після перевірки.'));
     } catch {
-      setStatus('Не вдалося з’єднатися з сервером. Перевірте інтернет і спробуйте ще раз.', true);
+      setStatus(
+        t('review.errNetwork', 'Не вдалося з’єднатися з сервером. Перевірте інтернет і спробуйте ще раз.'),
+        true
+      );
       if (submitBtn) submitBtn.disabled = false;
     }
   });

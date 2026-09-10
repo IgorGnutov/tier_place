@@ -1,6 +1,16 @@
 // Постбілд-крок: генерує статичну, індексовану Google сторінку на кожен товар з таблиць
-// "Шини"/"Диски" (аналогічно до scripts/generate-ru-html.mjs — той самий приклад: клонуємо
-// вже зібраний dist/index.html і патчимо лише потрібні частини, замість рендеру з нуля).
+// "Шини"/"Диски" — у ДВОХ мовах (аналогічно до scripts/generate-ru-html.mjs і
+// generate-cluster-pages.mjs: клонуємо вже зібраний HTML і патчимо лише потрібні частини,
+// замість рендеру з нуля).
+//
+// UA клонується з dist/index.html, RU — з УЖЕ ПЕРЕКЛАДЕНОЇ dist/ru/index.html, тому хедер,
+// футер, кошик і базові meta там уже російські. Це та сама причина, через яку крок іде після
+// generate-ru-html.mjs.
+//
+// ЧОМУ ДВІ МОВИ, А НЕ КЛІЄНТСЬКИЙ ПЕРЕКЛАД: мова визначається виключно зі шляху
+// (i18n.ts getLang()), а згенерований <main> свідомо не має хуків data-i18n — їх би
+// перезаписала applyStaticTranslations(). Доки RU-сторінок не було, клік на товар із /ru/
+// відкривав повністю українську сторінку.
 //
 // Спільний із клієнтом код (slug-формула, мапінг "рядок CSV → назва/характеристики",
 // рендер картки) живе в src/shared/*.mjs — плейн-ESM, який читає і Vite, і плейн-Node.
@@ -8,7 +18,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../src/shared/slug.mjs';
 import { listFacetPages, facetForProduct } from '../src/shared/clusters.mjs';
-import { describeTire, describeWheel } from '../src/shared/describe.mjs';
+import { describeTire, describeWheel, catalogLabel, priceText } from '../src/shared/describe.mjs';
 import {
   replaceAttr,
   removeAll,
@@ -24,18 +34,22 @@ import {
 } from './lib/html-patch.mjs';
 import { root, readBuildJson } from './lib/build-dir.mjs';
 import { appendUrls } from './lib/urls.mjs';
+import { langPrefix, pageTexts } from './lib/cluster-links.mjs';
+import { makeT } from './lib/i18n.mjs';
 import { SITE_URL } from '../src/shared/constants.mjs';
 
-/** Сторінки товару існують лише українською (RU-версії — фаза 2), тож переклад тривіальний.
- *  @type {import('../src/shared/describe.mjs').Translate} */
-const t = (_key, uk) => uk;
+const LABEL = 'generate-product-pages';
+const LANGS = ['uk', 'ru'];
+const describeFor = { tires: describeTire, wheels: describeWheel };
 
 // Фасетні сторінки потрібні тут для крихт: середня ланка мусить вести на ДОКУМЕНТ
 // (/tires/ і, де є, /tires/r16/), а не на якір головної.
 const FACET_PAGES = listFacetPages(JSON.parse(readFileSync(`${root}src/data/clusters.json`, 'utf8')));
 
-function buildPhotoHtml(product, imageSet) {
-  if (!product.imageUrl) return `<div class="product-detail__photo--placeholder">Фото немає</div>`;
+function buildPhotoHtml(product, imageSet, t) {
+  if (!product.imageUrl) {
+    return `<div class="product-detail__photo--placeholder">${escapeHtml(t('product.photoMissing', 'Фото немає'))}</div>`;
+  }
   if (!imageSet) {
     // Оптимізація цього фото не вдалась (buildProductImageAssets) — як і раніше, хотлінк на оригінал.
     return `<img src="${escapeAttr(product.imageUrl)}" alt="${escapeAttr(product.title)}" loading="eager" />`;
@@ -58,12 +72,17 @@ function reviewsAggregate(reviews) {
   return { value: Math.round((sum / reviews.length) * 10) / 10, count: reviews.length };
 }
 
-function reviewsWord(count) {
+/** Правила плюралізації в uk і ru однакові (mod 10 / mod 100), а форми різні — тому функція
+ *  з таблицею форм, а не ключ у словнику: t() не вміє вибирати форму за числом.
+ *  @param {number} count @param {string} lang */
+function reviewsWord(count, lang) {
+  const [one, few, many] =
+    lang === 'ru' ? ['отзыв', 'отзыва', 'отзывов'] : ['відгук', 'відгуки', 'відгуків'];
   const mod10 = count % 10;
   const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'відгук';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'відгуки';
-  return 'відгуків';
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
 }
 
 function starsHtml(rating) {
@@ -76,41 +95,46 @@ function formatReviewDate(isoDate) {
   return `${day}.${month}.${year}`;
 }
 
-function buildReviewFormHtml() {
+function buildReviewFormHtml(t) {
+  // «з 5» окремим ключем, а не шаблоном із підстановкою: t() не має інтерполяції, а число
+  // тут — не переклад.
+  const outOfFive = t('review.outOfFive', 'з 5');
   // Порядок зірок у DOM природний (1→5), щоб стрілки клавіатури рухали оцінку в той самий бік,
   // що й око. Заповнення "вибрана + усі менші" робить CSS через :has() — див. product-detail.css.
   const stars = [1, 2, 3, 4, 5]
     .map(
       (value) => `
             <input type="radio" id="review-rating-${value}" name="rating" value="${value}" required />
-            <label for="review-rating-${value}"><span class="visually-hidden">${value} з 5</span>★</label>`
+            <label for="review-rating-${value}"><span class="visually-hidden">${value} ${escapeHtml(outOfFive)}</span>★</label>`
     )
     .join('');
 
   return `
         <form class="review-form" id="review-form" novalidate>
-          <h3 class="review-form__title">Залишити відгук</h3>
+          <h3 class="review-form__title">${escapeHtml(t('review.leaveTitle', 'Залишити відгук'))}</h3>
           <fieldset class="review-form__rating">
-            <legend>Оцінка</legend>
+            <legend>${escapeHtml(t('review.ratingLegend', 'Оцінка'))}</legend>
             <div class="review-stars-input">${stars}
             </div>
           </fieldset>
-          <label for="review-author">Ваше ім'я</label>
+          <label for="review-author">${escapeHtml(t('review.authorLabel', "Ваше ім'я"))}</label>
           <input type="text" id="review-author" name="author" maxlength="60" required autocomplete="name" />
-          <label for="review-body">Відгук</label>
+          <label for="review-body">${escapeHtml(t('review.bodyLabel', 'Відгук'))}</label>
           <textarea id="review-body" name="body" rows="4" maxlength="1000" required></textarea>
           <div class="review-form__honeypot" aria-hidden="true">
-            <label for="review-website">Не заповнюйте це поле</label>
+            <label for="review-website">${escapeHtml(t('review.honeypotLabel', 'Не заповнюйте це поле'))}</label>
             <input type="text" id="review-website" name="website" tabindex="-1" autocomplete="off" />
           </div>
-          <button type="submit" class="btn" id="review-submit">Надіслати відгук</button>
+          <button type="submit" class="btn" id="review-submit">${escapeHtml(t('review.submit', 'Надіслати відгук'))}</button>
           <p class="review-form__status" id="review-status" role="status"></p>
         </form>`;
 }
 
-/** Видимий блок відгуків. Текст статичний український, без data-i18n/data-i18n-attr і без id,
- *  які чіпає main.js: applyStaticTranslations() перезаписала б їх одразу після старту JS. */
-function buildReviewsHtml(product) {
+/** Видимий блок відгуків. Текст перекладається ТУТ, на білді, і свідомо йде без
+ *  data-i18n/data-i18n-attr та без id, які чіпає main.js: applyStaticTranslations()
+ *  перезаписала б їх одразу після старту JS — саме тому RU-версія сторінки й мусить бути
+ *  окремим файлом, а не перекладом на клієнті. */
+function buildReviewsHtml(product, t, lang) {
   const reviews = product.reviews;
   const aggregate = reviewsAggregate(reviews);
 
@@ -122,7 +146,7 @@ function buildReviewsHtml(product) {
             minimumFractionDigits: 1,
             maximumFractionDigits: 1,
           })}</strong>
-          <span class="product-reviews__count">${aggregate.count} ${reviewsWord(aggregate.count)}</span>
+          <span class="product-reviews__count">${aggregate.count} ${reviewsWord(aggregate.count, lang)}</span>
         </div>`
     : '';
 
@@ -134,7 +158,7 @@ function buildReviewsHtml(product) {
           <li class="review">
             <div class="review__head">
               <strong class="review__author">${escapeHtml(review.author)}</strong>
-              <span class="review-stars" role="img" aria-label="Оцінка ${review.rating} з 5">${starsHtml(review.rating)}</span>
+              <span class="review-stars" role="img" aria-label="${escapeAttr(`${t('review.ratingLegend', 'Оцінка')} ${review.rating} ${t('review.outOfFive', 'з 5')}`)}">${starsHtml(review.rating)}</span>
               ${review.datePublished ? `<time class="review__date" datetime="${escapeAttr(review.datePublished)}">${formatReviewDate(review.datePublished)}</time>` : ''}
             </div>
             <p class="review__body">${escapeHtml(review.body)}</p>
@@ -143,34 +167,44 @@ function buildReviewsHtml(product) {
           .join('')}
         </ul>`
     : `
-        <p class="product-reviews__empty">Відгуків ще немає. Будьте першим.</p>`;
+        <p class="product-reviews__empty">${escapeHtml(t('review.empty', 'Відгуків ще немає. Будьте першим.'))}</p>`;
 
   return `
       <section class="product-reviews">
-        <h2 class="product-reviews__title">Відгуки</h2>${summaryHtml}${listHtml}${buildReviewFormHtml()}
+        <h2 class="product-reviews__title">${escapeHtml(t('review.sectionTitle', 'Відгуки'))}</h2>${summaryHtml}${listHtml}${buildReviewFormHtml(t)}
       </section>`;
 }
 
 /**
  * Ланки крихт товару: Головна → Шини → [R16] → назва. Ланка фасета присутня лише якщо для
  * товару є відповідна закріплена фасетна сторінка (див. src/data/clusters.json).
- * @param {object} product
+ *
+ * Ярлик фасета беремо з cluster-pages.json (linkLabel), а не з facetLabel() у clusters.mjs:
+ * той віддає сире значення прайсу («Литі», «Зима»), тобто українське навіть на RU-сторінці.
+ * linkLabel описаний на кожну мову й до того ж називає сторінку так, як вона сама себе
+ * називає в блоці перелінковки.
+ * @param {object} product @param {string} lang @param {import('../src/shared/describe.mjs').Translate} t
  * @returns {{ name: string, href: string | null }[]}
  */
-function productCrumbs(product) {
-  const catalogName = product.kind === 'tires' ? 'Шини' : 'Диски';
+function productCrumbs(product, lang, t) {
+  const prefix = langPrefix(lang);
   const crumbs = [
-    { name: 'Головна', href: '/' },
-    { name: catalogName, href: `/${product.kind}/` },
+    { name: t('breadcrumbs.home', 'Головна'), href: `${prefix}/` },
+    { name: catalogLabel(product.kind, t), href: `${prefix}/${product.kind}/` },
   ];
   const facet = facetForProduct(product.row, product.kind, FACET_PAGES);
-  if (facet) crumbs.push({ name: facet.label, href: `/${facet.path}/` });
+  if (facet) {
+    crumbs.push({
+      name: pageTexts[facet.key]?.[lang]?.linkLabel ?? facet.label,
+      href: `${prefix}/${facet.path}/`,
+    });
+  }
   crumbs.push({ name: product.title, href: null });
   return crumbs;
 }
 
 /** Ті самі стилі, що на кластерних сторінках (src/styles/cluster.css). */
-function breadcrumbsHtml(crumbs) {
+function breadcrumbsHtml(crumbs, t) {
   const items = crumbs
     .map((c) =>
       c.href
@@ -178,15 +212,16 @@ function breadcrumbsHtml(crumbs) {
         : `<li aria-current="page">${escapeHtml(c.name)}</li>`
     )
     .join('');
-  return `<nav class="breadcrumbs" aria-label="Навігація по сайту"><ol>${items}</ol></nav>`;
+  return `<nav class="breadcrumbs" aria-label="${escapeAttr(t('breadcrumbs.aria', 'Навігація по сайту'))}"><ol>${items}</ol></nav>`;
 }
 
-function buildMainHtml(product, imageSet) {
-  const photoHtml = buildPhotoHtml(product, imageSet);
+function buildMainHtml(product, imageSet, t, lang) {
+  const photoHtml = buildPhotoHtml(product, imageSet, t);
   const specsHtml = product.specs.map((s) => `<li>${escapeHtml(s.label)}: ${escapeHtml(s.value)}</li>`).join('');
   const statusClass = product.inStock ? 'status--in' : 'status--out';
-  const statusText = product.inStock ? 'В наявності' : 'Немає в наявності';
-  const priceText = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'Ціна за запитом';
+  const statusText = product.inStock
+    ? t('product.inStock', 'В наявності')
+    : t('product.outOfStock', 'Немає в наявності');
 
   const productData = jsonForScript({
     id: product.productId,
@@ -197,20 +232,20 @@ function buildMainHtml(product, imageSet) {
   });
   // Без id у колонці "id" відгук неможливо привʼязати до товару — блок (разом із формою)
   // не рендеримо взагалі, замість того щоб збирати відгуки, які нікуди не потраплять.
-  const reviewsHtml = product.productId ? buildReviewsHtml(product) : '';
+  const reviewsHtml = product.productId ? buildReviewsHtml(product, t, lang) : '';
 
   return `
     <div class="container product-detail">
-      ${breadcrumbsHtml(product.crumbs)}
+      ${breadcrumbsHtml(product.crumbs, t)}
       <div class="product-detail__grid">
         <div class="product-detail__photo">${photoHtml}</div>
         <div class="product-detail__body">
           <h1 class="product-detail__title">${escapeHtml(product.title)}</h1>
           <ul class="product-detail__specs">${specsHtml}</ul>
-          <span class="status ${statusClass}">${statusText}</span>
+          <span class="status ${statusClass}">${escapeHtml(statusText)}</span>
           <div class="product-detail__footer">
-            <span class="product-detail__price">${priceText}</span>
-            <button type="button" class="btn" id="product-buy-btn"${product.inStock ? '' : ' disabled'}>Купити</button>
+            <span class="product-detail__price">${escapeHtml(priceText(product.price, t))}</span>
+            <button type="button" class="btn" id="product-buy-btn"${product.inStock ? '' : ' disabled'}>${escapeHtml(t('product.buy', 'Купити'))}</button>
           </div>
         </div>
       </div>${reviewsHtml}
@@ -219,59 +254,84 @@ function buildMainHtml(product, imageSet) {
   `;
 }
 
-function buildProductPage(product, baseHtml, imageSet) {
-  const pageUrl = `${SITE_URL}/${product.kind}/${product.slug}/`;
-  const metaTitle = `${product.title} — купити в TIRE PLACE, Кривий Ріг`;
-  const priceLine = product.price !== null ? `${product.price.toLocaleString('uk-UA')} грн` : 'ціна за запитом';
+function buildProductPage(product, baseHtml, imageSet, lang, t) {
+  const pageUrl = `${SITE_URL}${langPrefix(lang)}/${product.kind}/${product.slug}/`;
+  const ukUrl = `${SITE_URL}/${product.kind}/${product.slug}/`;
+  const ruUrl = `${SITE_URL}/ru/${product.kind}/${product.slug}/`;
+  const metaTitle = `${product.title} ${t('meta.productTitleSuffix', '— купити в TIRE PLACE, Кривий Ріг')}`;
+  const priceLine =
+    product.price !== null
+      ? `${product.price.toLocaleString('uk-UA')} грн`
+      : t('meta.priceOnRequestLower', 'ціна за запитом');
   // У шин title уже закінчується розміром ("... 195/65 R15") — без цієї перевірки опис виходив
   // із дублем. У дисків size додає PCD/ET, яких у title немає, тож він потрібен.
   const sizePart = product.sizeLine && !product.title.includes(product.sizeLine) ? `, ${product.sizeLine}` : '';
   const metaDescription = `${product.title}${sizePart} — ${priceLine}. ${
-    product.inStock ? 'В наявності' : 'Немає в наявності'
-  } в автомагазині TIRE PLACE, Кривий Ріг.`;
+    product.inStock ? t('product.inStock', 'В наявності') : t('product.outOfStock', 'Немає в наявності')
+  } ${t('meta.productStoreLine', 'в автомагазині TIRE PLACE, Кривий Ріг.')}`;
   // Соцмережі краще тягнути з власного домену (стабільніше, ніж покладатись, що postimg.cc
   // лишиться доступним для скрапера) — беремо JPEG-варіант, якщо фото вдалось оптимізувати.
   const ogImageUrl = imageSet?.jpg ? `${SITE_URL}${imageSet.jpg}` : product.imageUrl;
 
   let html = baseHtml;
-  html = replaceMain(html, buildMainHtml(product, imageSet), 'generate-product-pages');
+  html = replaceMain(html, buildMainHtml(product, imageSet, t, lang), LABEL);
   html = html.replace(/<title[^>]*>[^<]*<\/title>/, () => `<title>${escapeHtml(metaTitle)}</title>`);
-  html = replaceAttr(html, '<meta name="description"[^>]*content="', metaDescription, 'generate-product-pages');
-  html = replaceAttr(html, '<link rel="canonical" id="canonical-link" href="', pageUrl, 'generate-product-pages');
-  html = replaceAttr(html, '<meta property="og:title" content="', metaTitle, 'generate-product-pages');
-  html = replaceAttr(html, '<meta property="og:description" content="', metaDescription, 'generate-product-pages');
-  html = replaceAttr(html, '<meta property="og:url" id="og-url-meta" content="', pageUrl, 'generate-product-pages');
-  html = replaceAttr(html, '<meta name="twitter:title" content="', metaTitle, 'generate-product-pages');
-  html = replaceAttr(html, '<meta name="twitter:description" content="', metaDescription, 'generate-product-pages');
+  html = replaceAttr(html, '<meta name="description"[^>]*?content="', metaDescription, LABEL);
+  html = replaceAttr(html, '<link rel="canonical" id="canonical-link" href="', pageUrl, LABEL);
+  html = replaceAttr(html, '<meta property="og:title" content="', metaTitle, LABEL);
+  html = replaceAttr(html, '<meta property="og:description" content="', metaDescription, LABEL);
+  html = replaceAttr(html, '<meta property="og:url" id="og-url-meta" content="', pageUrl, LABEL);
+  html = replaceAttr(html, '<meta name="twitter:title" content="', metaTitle, LABEL);
+  html = replaceAttr(html, '<meta name="twitter:description" content="', metaDescription, LABEL);
   if (ogImageUrl) {
-    html = replaceAttr(html, '<meta property="og:image" content="', ogImageUrl, 'generate-product-pages');
-    html = replaceAttr(html, '<meta name="twitter:image" content="', ogImageUrl, 'generate-product-pages');
+    html = replaceAttr(html, '<meta property="og:image" content="', ogImageUrl, LABEL);
+    html = replaceAttr(html, '<meta name="twitter:image" content="', ogImageUrl, LABEL);
     // Розміри 1200×900 стосувались фото вивіски з головної — до фото товару вони не підходять.
-    html = removeAll(html, /[ \t]*<meta property="og:image:(?:width|height)" content="\d+" \/>[ \t]*\r?\n?/g, 'og:image:width/height', 'generate-product-pages');
+    html = removeAll(html, /[ \t]*<meta property="og:image:(?:width|height)" content="\d+" \/>[ \t]*\r?\n?/g, 'og:image:width/height', LABEL);
   }
 
   // main.js (i18n.ts) під час старту перезаписує #canonical-link/#og-url-meta на URL головної,
   // а applyStaticTranslations() — усі теги з data-i18n/data-i18n-attr="content:meta.*" на
   // RU-рядки головної. Обидва пошуки мають нічого не знайти на сторінці товару, інакше
   // побудовані тут SEO-теги зникають одразу після виконання JS (у DOM, який індексує Google).
-  html = stripI18nHooks(html, 'generate-product-pages');
-  // Перемикач мови: без data-lang-link клік — звичайний перехід за href ("/" або "/ru/"),
-  // а не JS-підміна контенту поточної сторінки. RU-версії сторінки товару немає.
-  html = removeAll(html, / data-lang-link="(?:uk|ru)"/g, 'data-lang-link', 'generate-product-pages');
-  html = html.replace('<a href="/" class="lang-switch__link"', () => '<a href="/" class="lang-switch__link is-active"');
+  html = stripI18nHooks(html, LABEL);
 
-  // Немає RU-версії сторінки товару (поза межами цієї задачі) — прибираємо hreflang-альтернативи
-  // й og:locale:alternate, щоб не посилатись на неіснуючу сторінку.
-  html = html.replace(/\s*<link rel="alternate" hreflang="[^"]*" href="[^"]*"\s*\/>/g, '');
-  html = html.replace(/\s*<meta property="og:locale:alternate" content="ru_RU"\s*\/>/, '');
+  // hreflang: власна взаємна пара цієї сторінки, а не альтернативи головної з оболонки.
+  // (Доки RU-версії товару не існувало, тут увесь блок вирізався.) og:locale:alternate
+  // навпаки НЕ чіпаємо: обидві оболонки вже несуть правильне значення — dist/index.html
+  // "ru_RU", dist/ru/index.html "uk_UA".
+  html = removeAll(
+    html,
+    /[ \t]*<link rel="alternate" hreflang="[^"]*" href="[^"]*"[^>]*\/>[ \t]*\r?\n?/g,
+    'hreflang alternates',
+    LABEL
+  );
+  const hreflangs =
+    `  <link rel="alternate" hreflang="uk-UA" href="${escapeAttr(ukUrl)}" />\n` +
+    `  <link rel="alternate" hreflang="ru-UA" href="${escapeAttr(ruUrl)}" />\n` +
+    `  <link rel="alternate" hreflang="x-default" href="${escapeAttr(ukUrl)}" />\n`;
+  html = html.replace('<!-- Open Graph / Twitter -->', () => `${hreflangs}\n  <!-- Open Graph / Twitter -->`);
+
+  // Перемикач мови стає СПРАВЖНЬОЮ навігацією на двійника — так само, як на кластерних
+  // сторінках. Причина та сама: текст <main> живе в цьому генераторі, а не в ru.json, тож
+  // клієнтський i18n його не знає і залишив би сторінку українською під RU-адресою.
+  html = removeAll(html, / data-lang-link="(?:uk|ru)"/g, 'data-lang-link', LABEL);
+  html = html.replace(
+    /<a href="\/" class="lang-switch__link"/,
+    () => `<a href="${escapeAttr(ukUrl.replace(SITE_URL, ''))}" class="lang-switch__link${lang === 'uk' ? ' is-active' : ''}"`
+  );
+  html = html.replace(
+    /<a href="\/ru\/" class="lang-switch__link"/,
+    () => `<a href="${escapeAttr(ruUrl.replace(SITE_URL, ''))}" class="lang-switch__link${lang === 'ru' ? ' is-active' : ''}"`
+  );
 
   // Preload LCP-фото hero-слайдера: hero на сторінці товару немає (<main> замінено) — це був би
   // зайвий високопріоритетний запит, що конкурує з фото самого товару.
-  html = removeHeroPreload(html, 'generate-product-pages');
+  html = removeHeroPreload(html, LABEL);
 
   // Service/FAQPage/BreadcrumbList головної описують контент, якого на цій сторінці немає.
   // AutoPartsStore лишається — це загальносайтова інформація про бізнес.
-  html = removeJsonLd(html, ['Service', 'FAQPage', 'BreadcrumbList'], 'generate-product-pages');
+  html = removeJsonLd(html, ['Service', 'FAQPage', 'BreadcrumbList'], LABEL);
 
   // Агрегат рахується рівно по тих відгуках, що видимі на сторінці — цього прямо вимагає Google
   // (розмічений контент має бути присутній для користувача). Обидва поля або є разом з видимим
@@ -361,8 +421,8 @@ function buildProductPage(product, baseHtml, imageSet) {
   return { html, ogImageUrl };
 }
 
-function writeProductPage(product, html, root) {
-  const outDir = `${root}dist/${product.kind}/${product.slug}`;
+function writeProductPage(product, html, root, lang) {
+  const outDir = `${root}dist${langPrefix(lang)}/${product.kind}/${product.slug}`;
   mkdirSync(outDir, { recursive: true });
   writeFileSync(`${outDir}/index.html`, html);
 }
@@ -450,17 +510,43 @@ function attachReviews(products, reviewsByProduct) {
   }
 }
 
+/**
+ * Мовно-НЕзалежна частина товару — усе, що складається лише з даних прайсу. Мовно-залежні
+ * `specs` (ярлики характеристик) і `crumbs` рахуються в циклі по мовах, а не тут.
+ *
+ * `key` мусить лишитись ідентичним в обох мовах: він складається з назви й розміру, і саме по
+ * ньому кошик зливає позиції. Інакше той самий товар, доданий з /ru/tires/x/ і з /tires/x/,
+ * став би двома різними позиціями.
+ * @param {Record<string, string>} row @param {'tires'|'wheels'} kind @param {string} slug
+ */
+function baseProduct(row, kind, slug) {
+  const info = describeFor[kind](row, makeT('uk'));
+  return {
+    kind,
+    slug,
+    row,
+    // productId читається тут, а не в describeTire/describeWheel: колонка "id" потрібна лише
+    // цьому скрипту (привʼязка відгуків), клієнтському каталогу — ні.
+    productId: (row.id ?? '').trim(),
+    title: info.title,
+    sizeLine: info.sizeLine,
+    key: info.key,
+    price: info.price,
+    inStock: info.inStock,
+    imageUrl: info.imageUrl,
+    brand: info.brand,
+  };
+}
+
 function loadProducts() {
   const data = readBuildJson('data.json', 'scripts/fetch-data.mjs');
 
   const tireSlugs = dedupeSlugs(data.tires, tireSlug);
   const wheelSlugs = dedupeSlugs(data.wheels, wheelSlug);
 
-  // productId читається тут, а не в describeTire/describeWheel: колонка "id" потрібна лише
-  // цьому скрипту (привʼязка відгуків), клієнтському каталогу — ні.
   const products = [
-    ...data.tires.map((row, i) => ({ ...describeTire(row, t), kind: 'tires', slug: tireSlugs[i], productId: (row.id ?? '').trim(), row })),
-    ...data.wheels.map((row, i) => ({ ...describeWheel(row, t), kind: 'wheels', slug: wheelSlugs[i], productId: (row.id ?? '').trim(), row })),
+    ...data.tires.map((row, i) => baseProduct(row, 'tires', tireSlugs[i])),
+    ...data.wheels.map((row, i) => baseProduct(row, 'wheels', wheelSlugs[i])),
   ].filter((product) => {
     // Порожній slug = усі колонки-ідентифікатори рядка порожні. Такий товар дав би URL
     // "/tires//" і перезаписав би dist/tires/index.html — пропускаємо повністю.
@@ -472,21 +558,29 @@ function loadProducts() {
   });
 
   attachReviews(products, groupReviews(data.reviews));
-  for (const product of products) product.crumbs = productCrumbs(product);
   return products;
 }
 
-/** Дописує URL сторінок товару в накопичувач для scripts/generate-sitemap.mjs. */
+/** Дописує URL сторінок товару в накопичувач для scripts/generate-sitemap.mjs — по два на
+ *  товар (UA + RU) зі спільним переліком alternates. */
 function collectUrls(products) {
   appendUrls(
-    products.map((p) => ({
-      loc: `${SITE_URL}/${p.kind}/${p.slug}/`,
-      changefreq: 'weekly',
-      priority: '0.6',
+    products.flatMap((p) => {
+      const ukUrl = `${SITE_URL}/${p.kind}/${p.slug}/`;
+      const ruUrl = `${SITE_URL}/ru/${p.kind}/${p.slug}/`;
+      const alternates = [
+        { hreflang: 'uk-UA', href: ukUrl },
+        { hreflang: 'ru-UA', href: ruUrl },
+        { hreflang: 'x-default', href: ukUrl },
+      ];
       // image:image допомагає індексуванню фото товару в Google Images окремо від Web Search —
       // беремо той самий ownDomain-URL, що вже пішов у og:image (не хотлінк на postimg.cc).
-      images: p.ogImageUrl ? [p.ogImageUrl] : [],
-    }))
+      const images = p.ogImageUrl ? [p.ogImageUrl] : [];
+      return [
+        { loc: ukUrl, changefreq: 'weekly', priority: '0.6', alternates, images },
+        { loc: ruUrl, changefreq: 'weekly', priority: '0.5', alternates, images },
+      ];
+    })
   );
 }
 
@@ -501,16 +595,34 @@ function main() {
     return;
   }
 
-  const baseHtml = readFileSync(`${root}dist/index.html`, 'utf8');
+  // UA — з dist/index.html, RU — з УЖЕ ПЕРЕКЛАДЕНОЇ dist/ru/index.html (крок 4 конвеєра).
+  const shells = {
+    uk: readFileSync(`${root}dist/index.html`, 'utf8'),
+    ru: readFileSync(`${root}dist/ru/index.html`, 'utf8'),
+  };
   const detailImageAssets = new Map(Object.entries(readBuildJson('images.json', 'scripts/build-product-images.mjs').detail));
-  for (const product of products) {
-    const imageSet = product.imageUrl ? detailImageAssets.get(product.imageUrl) : undefined;
-    const { html, ogImageUrl } = buildProductPage(product, baseHtml, imageSet);
-    product.ogImageUrl = ogImageUrl;
-    writeProductPage(product, html, root);
+
+  for (const lang of LANGS) {
+    const t = makeT(lang);
+    for (const product of products) {
+      // Мовно-залежне добудовується тут; решта полів товару однакова в обох мовах.
+      const view = {
+        ...product,
+        specs: describeFor[product.kind](product.row, t).specs,
+        crumbs: productCrumbs(product, lang, t),
+      };
+      const imageSet = product.imageUrl ? detailImageAssets.get(product.imageUrl) : undefined;
+      const { html, ogImageUrl } = buildProductPage(view, shells[lang], imageSet, lang, t);
+      product.ogImageUrl = ogImageUrl; // те саме фото в обох мовах — перезапис безпечний
+      writeProductPage(product, html, root, lang);
+    }
   }
+
   collectUrls(products);
-  console.log(`generate-product-pages: згенеровано ${products.length} сторінок товару.`);
+  console.log(
+    `${LABEL}: згенеровано ${products.length * LANGS.length} сторінок товару ` +
+      `(${products.length} × ${LANGS.length} мови).`
+  );
 }
 
 try {

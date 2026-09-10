@@ -15,9 +15,33 @@ import { escapeHtml, escapeAttr } from '../../src/shared/html-escape.mjs';
  */
 export function replaceAttr(source, matchPrefix, value, label = 'html-patch') {
   const re = new RegExp(`(${matchPrefix})[^"]*(")`);
-  if (!re.test(source)) throw new Error(`${label}: pattern not found — ${matchPrefix}`);
+  const match = re.exec(source);
+  if (!match) throw new Error(`${label}: pattern not found — ${matchPrefix}`);
+  assertAttrBoundary(match[1], matchPrefix, label);
   const escaped = escapeAttr(value);
   return source.replace(re, (_match, before, after) => `${before}${escaped}${after}`);
+}
+
+/**
+ * Збіг мусить починатись на МЕЖІ імені атрибута, а не всередині нього.
+ *
+ * На цю пастку вже наступили: шаблон `<meta name="description"[^>]*content="` із жадібним
+ * `[^>]*` доїжджав до ОСТАННЬОГО `content="` у тезі, а в оболонці /ru/ це
+ * `data-i18n-orig-content="` (його додає generate-ru-html.mjs). Тобто підмінявся кеш-атрибут,
+ * а видимий `content` лишався описом головної — усі RU-кластерні сторінки віддавали Google
+ * опис головної замість власного, і жодна перевірка цього не ловила. Лікування — лінивий
+ * `[^>]*?`; ця перевірка є, щоб наступний такий шаблон падав на білді, а не тихо.
+ * @param {string} matched @param {string} matchPrefix @param {string} label
+ */
+function assertAttrBoundary(matched, matchPrefix, label) {
+  const attr = /([\w-]+)="$/.exec(matchPrefix)?.[1];
+  if (!attr) return;
+  const before = matched.slice(0, -(attr.length + 2)).slice(-1);
+  if (before === '' || /\s/.test(before)) return;
+  throw new Error(
+    `${label}: збіг припав на середину імені атрибута ("${before}${attr}=") у шаблоні ` +
+      `${matchPrefix} — зроби [^>]* лінивим ([^>]*?)`
+  );
 }
 
 /**

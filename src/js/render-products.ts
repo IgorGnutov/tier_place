@@ -15,7 +15,7 @@ import {
 import { showToast } from './telegram';
 import { addItem } from './cart';
 import { getProductImageManifest } from './product-images';
-import { t, onLangChange } from './i18n';
+import { t, getLang, onLangChange } from './i18n';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../shared/slug.mjs';
 import { SHEET_TIRES_CSV, SHEET_WHEELS_CSV } from '../config';
 import { PAGE_SIZE } from '../shared/constants.mjs';
@@ -113,8 +113,9 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
   const slugOf = idPrefix === 'tires' ? tireSlug : wheelSlug;
   dedupeSlugs(rows, slugOf).forEach((slug, i) => {
     // Порожній slug — статичної сторінки для такого рядка білд не згенерував, тож картка
-    // лишається без посилання (див. productCardHtml).
-    rows[i].__detailUrl = slug ? `/${idPrefix}/${slug}/` : '';
+    // лишається без посилання (див. productCardHtml). Сам __detailUrl складається в
+    // renderResults(), бо в ньому є префікс мови.
+    rows[i].__slug = slug;
   });
   // Фасетна сторінка (/tires/r16/) віддає фасет у розмітці: initCatalog стартує з ним як
   // початковим станом фільтра, показує його в чипсах — і дозволяє зняти. URL-параметри мають
@@ -231,7 +232,15 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
     if (filtered.length === 0) {
       renderState(grid, t('product.notFound', 'Нічого не знайдено за обраними фільтрами.'), false);
     } else {
-      const shown = filtered.slice(0, visibleCount).map((row) => config.describe(row));
+      // Префікс мови складається тут, на кожне перемальовування, а не один раз при старті:
+      // onLangChange перемальовує грід після pushState-перемикання мови на головній, і
+      // посилання мусять піти на сторінки товару тієї самої мови (мова визначається
+      // виключно зі шляху — див. getLang()).
+      const langPrefix = getLang() === 'ru' ? '/ru' : '';
+      const shown = filtered.slice(0, visibleCount).map((row) => {
+        row.__detailUrl = row.__slug ? `${langPrefix}/${idPrefix}/${row.__slug}/` : '';
+        return config.describe(row);
+      });
       cardsByKey.clear();
       shown.forEach((info) => cardsByKey.set(info.key, info));
       grid.innerHTML = shown.map((info) => productCardHtml(info, imageManifest, t)).join('');

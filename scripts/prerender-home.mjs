@@ -16,7 +16,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { root, readBuildJson } from './lib/build-dir.mjs';
 import { appendUrls } from './lib/urls.mjs';
-import { clusterLinksHtml } from './lib/cluster-links.mjs';
+import { clusterLinksHtml, langPrefix } from './lib/cluster-links.mjs';
+import { makeT } from './lib/i18n.mjs';
 import { SITE_URL, PAGE_SIZE } from '../src/shared/constants.mjs';
 import { describeTire, describeWheel } from '../src/shared/describe.mjs';
 import { productCardHtml } from '../src/shared/product-card.mjs';
@@ -27,16 +28,6 @@ const LABEL = 'prerender-home';
 
 const data = readBuildJson('data.json', 'scripts/fetch-data.mjs');
 const images = readBuildJson('images.json', 'scripts/build-product-images.mjs');
-
-// RU-рядки з тих самих JSON, що їх імпортує клієнт і generate-ru-html.mjs — щоб ярлики карток
-// («В наличии», «Купить», «Найдено») не розходились із клієнтським i18n.
-const RU_STRINGS = {
-  ...JSON.parse(readFileSync(`${root}src/i18n/ru.json`, 'utf8')),
-  ...JSON.parse(readFileSync(`${root}src/i18n/ru-meta.json`, 'utf8')),
-};
-
-/** @param {string} lang @returns {import('../src/shared/describe.mjs').Translate} */
-const makeT = (lang) => (lang === 'ru' ? (key, uk) => RU_STRINGS[key] ?? uk : (_key, uk) => uk);
 
 const CATALOGS = [
   { kind: 'tires', rows: data.tires, slugOf: tireSlug, describe: describeTire },
@@ -85,7 +76,13 @@ function prerender(lang, file) {
       .slice(0, PAGE_SIZE)
       .map((row, i) =>
         productCardHtml(
-          catalog.describe({ ...row, __detailUrl: slugs[i] ? `/${catalog.kind}/${slugs[i]}/` : '' }, t),
+          // Посилання мусить лишатись у поточній мові: картка в dist/ru/index.html веде на
+          // /ru/tires/<slug>/, інакше клік із RU-головної відкривав би українську сторінку
+          // товару (мова визначається виключно зі шляху — див. i18n.ts getLang()).
+          catalog.describe(
+            { ...row, __detailUrl: slugs[i] ? `${langPrefix(lang)}/${catalog.kind}/${slugs[i]}/` : '' },
+            t
+          ),
           images.card,
           t
         )
