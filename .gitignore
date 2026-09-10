@@ -5,3 +5,4 @@ dist/
 .claude/skills/
 .playwright-cli/
 .build/
+.image-cache/

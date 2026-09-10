@@ -17,7 +17,7 @@
 // Джерело вужче за цільову ширину не збільшується (обидва розміри згортаються в один набір).
 // Помилка на одному фото (мертве посилання, недоступний хост, непідтримуваний формат) НЕ
 // валить білд — товар просто лишається з прямим посиланням на оригінал, як до цієї оптимізації.
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
 import { root, readBuildJson, writeBuildJson } from './lib/build-dir.mjs';
@@ -30,6 +30,45 @@ const IMAGE_FORMATS = [
   ['jpg', (img) => img.jpeg({ quality: 75, progressive: true, mozjpeg: true })],
 ];
 const IMAGE_FETCH_CONCURRENCY = 6;
+// postimg.cc віддає той самий файл то за півсекунди, то за 40-60 (холодний edge-кеш на їхньому
+// боці, від нас не залежить). Без таймауту одне таке фото тримало воркер, скільки завгодно, а
+// потім лишалось без оптимізованої копії — товар назавжди вантажив повільний оригінал. Тому
+// обриваємо повільну спробу і пробуємо ще: наступна спроба зазвичай застає кеш уже прогрітим.
+const IMAGE_FETCH_TIMEOUT_MS = 20_000;
+const IMAGE_FETCH_ATTEMPTS = 3;
+const IMAGE_FETCH_RETRY_DELAY_MS = 3_000;
+
+async function fetchImageBuffer(url) {
+  let lastError;
+  for (let attempt = 1; attempt <= IMAGE_FETCH_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return Buffer.from(await res.arrayBuffer());
+    } catch (err) {
+      lastError = err;
+      if (attempt < IMAGE_FETCH_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, IMAGE_FETCH_RETRY_DELAY_MS));
+      }
+    }
+  }
+  throw lastError;
+}
+
+// Оригінали фото кешуються МІЖ білдами (actions/cache у .github/workflows/deploy.yml). Це не
+// оптимізація швидкості, а умова того, щоб фото не зникало: dist/ щоразу збирається з нуля й
+// деплоїться з видаленням, тож фото, яке саме в цьому білді не встигло завантажитись, губило
+// локальну копію на хостингу — навіть якщо попередній білд її вже поклав. З кешем із postimg
+// качаються лише нові посилання, а раз завантажене фото лишається назавжди.
+const cacheDir = `${root}.image-cache`;
+
+async function loadOriginal(url, hash) {
+  const cachedPath = `${cacheDir}/${hash}`;
+  if (existsSync(cachedPath)) return readFileSync(cachedPath);
+  const buffer = await fetchImageBuffer(url);
+  writeFileSync(cachedPath, buffer);
+  return buffer;
+}
 
 async function encodeImageVariant(buffer, hash, width) {
   const files = {};
@@ -50,6 +89,7 @@ async function main() {
   ];
 
   mkdirSync(`${root}dist/assets/products`, { recursive: true });
+  mkdirSync(cacheDir, { recursive: true });
 
   /** @type {Record<string, Record<string, string>>} */
   const card = {};
@@ -61,13 +101,11 @@ async function main() {
   async function worker() {
     while (cursor < urls.length) {
       const url = urls[cursor++];
+      const hash = createHash('sha1').update(url).digest('hex').slice(0, 16);
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const buffer = Buffer.from(await res.arrayBuffer());
+        const buffer = await loadOriginal(url, hash);
         const meta = await sharp(buffer).metadata();
         const sourceWidth = meta.width ?? DETAIL_WIDTH;
-        const hash = createHash('sha1').update(url).digest('hex').slice(0, 16);
 
         const cardWidth = Math.min(CARD_WIDTH, sourceWidth);
         const detailWidth = Math.min(DETAIL_WIDTH, sourceWidth);

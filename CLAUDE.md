@@ -161,6 +161,16 @@ client-rendered:**
   falls back to hotlinking the original URL, same as before this existed. `public/data/product-images.json`
   ships a `{}` stub so `npm run dev`/local preview don't 404 on the manifest fetch; the real build
   overwrites it in `dist/`.
+  **Завантаження оригіналів: таймаут, ретраї і кеш між білдами — усі три обов'язкові.**
+  postimg.cc віддає той самий файл то за півсекунди, то за 40–60 (холодний edge-кеш на їхньому
+  боці). Без таймауту одне таке фото тримало воркер як завгодно довго; тому 20 с на спробу,
+  3 спроби, пауза 3 с. Але сам ретрай проблему не закриває: `dist/` збирається з нуля й
+  деплоїться з видаленням, тож фото, яке не встигло саме в цьому білді, **зникало з хостингу** —
+  навіть якщо попередній білд його вже поклав. Тому оригінали кешуються в `.image-cache/`
+  (`.gitignore`, ключ = той самий sha1-хеш URL, що й у назвах файлів) і переносяться між
+  запусками через `actions/cache` у `.github/workflows/deploy.yml`: з postimg качаються лише нові
+  посилання, а раз завантажене фото лишається назавжди. Ключ кешу — `run_id` + `restore-keys`,
+  бо запис у кеш GitHub незмінний: кожен запуск зберігає свій знімок і відновлює найновіший.
 - The generated pages load the shared, unmodified `main.js`, which mutates `<head>` on startup:
   `i18n.ts`'s `updateHeadForLang()` rewrites `#canonical-link`/`#og-url-meta` to the homepage URL,
   and `applyStaticTranslations()` overwrites anything carrying `data-i18n`/`data-i18n-attr`. The

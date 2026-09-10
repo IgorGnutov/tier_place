@@ -21,6 +21,16 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Кеш оригіналів фото товару між білдами. Ключ із run_id + restore-keys — бо запис у кеш
+      # незмінний: кожен запуск зберігає свій знімок і відновлює найновіший наявний. Без цього
+      # кожен білд качав би всі фото з postimg.cc заново, а той віддає той самий файл то за
+      # півсекунди, то за хвилину — див. коментар у scripts/build-product-images.mjs.
+      - name: Cache product photo originals
+        uses: actions/cache@v4
+        with:
+          path: .image-cache
+          key: product-images-${{ github.run_id }}
+          restore-keys: product-images-
       - run: npm run build
       # Хостинг рве керуючий FTP-конект на середині заливки ("Server sent FIN packet
       # unexpectedly") — тому FTPS (шифрований конект живе стабільніше і не ріжеться
