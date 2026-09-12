@@ -204,6 +204,50 @@ function faqHtml(faq, t) {
   );
 }
 
+// ---------------------------------------------------------------- повний список товарів
+
+/**
+ * Повний перелік посилань на всі товари каталогу. Тільки для хабів (/tires/, /wheels/ і їхні
+ * RU-дзеркала) — на фасетах він був би майже тим самим списком удруге.
+ *
+ * ЧОМУ ЦЕ ПОТРІБНО: грід і тут, і на головній віддає рівно PAGE_SIZE = 9 карток (більше не
+ * можна — 143 картки зіщулились би до 9 одразу після старту JS, тобто CLS), решта товарів
+ * з'являється лише після кліку «показати ще». Через це 95 зі 159 товарних сторінок не мали
+ * жодного статичного <a> із сайту: Google знав про них тільки з sitemap — найслабшого сигналу
+ * виявлення — і тримав у «Виявлено — наразі не проіндексовано». Хаб із повним списком дає
+ * кожній товарній сторінці щонайменше одне справжнє внутрішнє посилання.
+ *
+ * Свідомо ТЕКСТОВІ посилання, а не картки: клієнтський initCatalog перемальовує лише
+ * #<kind>-grid, цього списку не чіпає взагалі — тож він не блимає і не додає CLS.
+ *
+ * @param {Record<string,string>[]} rows
+ * @param {'tires'|'wheels'} kind
+ * @param {import('../src/shared/describe.mjs').Translate} t
+ * @returns {string}
+ */
+function productIndexHtml(rows, kind, t) {
+  const items = rows
+    .map((row) => ({ title: describeFor[kind](row, t).title, href: row.__detailUrl }))
+    .filter((item) => item.href && item.title)
+    .sort((a, b) => a.title.localeCompare(b.title, 'uk'));
+  if (items.length === 0) return '';
+
+  const heading =
+    kind === 'tires'
+      ? t('index.headingTires', 'Повний каталог шин')
+      : t('index.headingWheels', 'Повний каталог дисків');
+  const id = `product-index-${kind}`;
+  const list = items
+    .map((item) => `<li><a href="${escapeAttr(item.href)}">${escapeHtml(item.title)}</a></li>`)
+    .join('');
+
+  return (
+    `<nav class="product-index" aria-labelledby="${id}">` +
+    `<h2 id="${id}">${escapeHtml(heading)}</h2>` +
+    `<ul class="product-index__list">${list}</ul></nav>`
+  );
+}
+
 // ---------------------------------------------------------------- <main>
 
 /**
@@ -215,6 +259,9 @@ function faqHtml(faq, t) {
  * @returns {string}
  */
 function buildMainHtml(page, text, lang, t, crumbs) {
+  // Повний список товарів іде НАЙОСТАННІШИМ блоком: на мобільному це 140+ рядків, і перед
+  // FAQ він відсунув би відповіді на пів екрана прокрутки.
+  let productIndex = '';
   const parts = [
     breadcrumbsHtml(crumbs, t),
     `<h1 class="cluster-page__title">${escapeHtml(text.h1)}</h1>`,
@@ -229,6 +276,7 @@ function buildMainHtml(page, text, lang, t, crumbs) {
     parts.push(
       fillCatalogPanel(shellPanel, page.kind, rows, t, page.type === 'facet' ? { field: page.field, value: page.value } : null)
     );
+    if (page.type === 'hub') productIndex = productIndexHtml(langRows, page.kind, t);
   } else {
     // Контентна сторінка: CTA веде просто в чат Telegram без передзаповненого тексту —
     // ?text= не в усіх клієнтах Telegram надійно підставляється в приватному чаті (той самий
@@ -241,7 +289,7 @@ function buildMainHtml(page, text, lang, t, crumbs) {
     );
   }
 
-  parts.push(faqHtml(text.faq, t));
+  parts.push(faqHtml(text.faq, t), productIndex);
 
   return `<div class="container cluster-page">${parts.join('')}</div>`;
 }

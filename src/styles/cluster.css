@@ -149,3 +149,43 @@
   margin-bottom: var(--space-md);
   font-size: var(--fs-h2);
 }
+
+/* Повний список товарів у кінці хабів /tires/ і /wheels/ — внутрішня перелінковка на всі 159
+   сторінок товару (див. productIndexHtml у scripts/generate-cluster-pages.mjs). Текстовий
+   список, а не картки: клієнтський initCatalog його не чіпає, тож він не перемальовується. */
+.product-index {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+.product-index h2 {
+  margin-bottom: var(--space-md);
+  font-size: var(--fs-h2);
+}
+
+.product-index__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  columns: 260px auto;
+  column-gap: var(--space-lg);
+}
+
+.product-index__list li {
+  break-inside: avoid;
+  font-size: var(--fs-small);
+}
+
+.product-index__list a {
+  display: block;
+  padding: 0.45em 0;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  line-height: 1.5;
+}
+
+.product-index__list a:hover,
+.product-index__list a:focus-visible {
+  color: var(--color-accent);
+}
