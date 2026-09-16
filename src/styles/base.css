@@ -368,6 +368,21 @@ button {
   color: var(--color-danger);
 }
 
+/* "Під замовлення" — третій стан поруч зі статусом наявності, а не замість нього:
+   ні зелений, ні червоний, тому бренд-акцент. */
+.status--order {
+  color: var(--color-accent);
+}
+
+/* Обгортка бейджів: у картці й на сторінці товару контейнер — flex-колонка, без цього
+   два сусідні .status стали б у стовпчик. */
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em 1em;
+}
+
 /* Скелетони завантаження */
 .skeleton {
   background: linear-gradient(90deg, var(--color-bg-raised) 25%, rgba(255, 255, 255, 0.06) 50%, var(--color-bg-raised) 75%);

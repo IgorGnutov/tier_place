@@ -40,6 +40,7 @@
   "product.no": "Нет",
   "product.inStock": "В наличии",
   "product.outOfStock": "Нет в наличии",
+  "product.onOrder": "Под заказ",
   "product.buy": "Купить",
   "product.priceOnRequest": "Цена по запросу",
   "product.foundLabel": "Найдено",

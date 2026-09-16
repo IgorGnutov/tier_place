@@ -222,6 +222,11 @@ function buildMainHtml(product, imageSet, t, lang) {
   const statusText = product.inStock
     ? t('product.inStock', 'В наявності')
     : t('product.outOfStock', 'Немає в наявності');
+  // Другий бейдж поруч зі статусом, а не замість нього: on_order у прайсі незалежний від
+  // in_stock. Кнопку "Купити" він не розблоковує — див. src/shared/product-card.mjs.
+  const orderBadge = product.onOrder
+    ? `<span class="status status--order">${escapeHtml(t('product.onOrder', 'Під замовлення'))}</span>`
+    : '';
 
   const productData = jsonForScript({
     id: product.productId,
@@ -242,7 +247,7 @@ function buildMainHtml(product, imageSet, t, lang) {
         <div class="product-detail__body">
           <h1 class="product-detail__title">${escapeHtml(product.title)}</h1>
           <ul class="product-detail__specs">${specsHtml}</ul>
-          <span class="status ${statusClass}">${escapeHtml(statusText)}</span>
+          <div class="status-row"><span class="status ${statusClass}">${escapeHtml(statusText)}</span>${orderBadge}</div>
           <div class="product-detail__footer">
             <span class="product-detail__price">${escapeHtml(priceText(product.price, t))}</span>
             <button type="button" class="btn" id="product-buy-btn"${product.inStock ? '' : ' disabled'}>${escapeHtml(t('product.buy', 'Купити'))}</button>
@@ -355,7 +360,13 @@ function buildProductPage(product, baseHtml, imageSet, lang, t) {
             '@type': 'Offer',
             price: product.price,
             priceCurrency: 'UAH',
-            availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            // BackOrder — саме той стан, що описує "немає на складі, але приймаємо замовлення";
+            // OutOfStock лишається тільки для товару, який не можна замовити взагалі.
+            availability: product.inStock
+              ? 'https://schema.org/InStock'
+              : product.onOrder
+                ? 'https://schema.org/BackOrder'
+                : 'https://schema.org/OutOfStock',
             url: pageUrl,
             // 14 днів на товар належної якості — мінімум за Законом України «Про захист прав
             // споживачів»; той самий текст видимий у футері (footer.terms), бо Google вимагає,
@@ -533,6 +544,7 @@ function baseProduct(row, kind, slug) {
     key: info.key,
     price: info.price,
     inStock: info.inStock,
+    onOrder: info.onOrder,
     imageUrl: info.imageUrl,
     brand: info.brand,
   };

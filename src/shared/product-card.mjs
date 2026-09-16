@@ -54,6 +54,12 @@ export function productCardHtml(info, imageManifest, t) {
   const statusText = info.inStock ? t('product.inStock', 'В наявності') : t('product.outOfStock', 'Немає в наявності');
   const outOfStock = t('product.outOfStock', 'Немає в наявності');
   const buyAttrs = info.inStock ? '' : ` disabled title="${escapeAttr(outOfStock)}"`;
+  // "Під замовлення" — окрема колонка прайсу (on_order), незалежна від наявності: товар може
+  // бути і в наявності, і під замовлення. Тому другий бейдж поруч, а не замість статусу, і на
+  // кнопку "Купити" він не впливає — її й далі вимикає лише in_stock.
+  const orderBadge = info.onOrder
+    ? `<span class="status status--order">${escapeHtml(t('product.onOrder', 'Під замовлення'))}</span>`
+    : '';
 
   return (
     `<article class="product-card">` +
@@ -62,7 +68,10 @@ export function productCardHtml(info, imageManifest, t) {
     `<h3 class="product-card__title">${escapeHtml(info.title)}</h3>` +
     `</a>` +
     `<ul class="product-card__specs">${specs}</ul>` +
+    `<div class="status-row">` +
     `<span class="status ${info.inStock ? 'status--in' : 'status--out'}">${escapeHtml(statusText)}</span>` +
+    orderBadge +
+    `</div>` +
     `<div class="product-card__footer">` +
     `<span class="product-card__price">${escapeHtml(priceText(info.price, t))}</span>` +
     `<div class="product-card__actions">` +

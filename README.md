@@ -149,8 +149,8 @@ public/                   — статичні файли, копіюються 
    в одному файлі, головне — правильний `gid` для export-посилання).
 2. **Перший рядок — заголовки колонок, назви змінювати не можна** (сайт читає дані саме за цими
    ключами):
-   - **Шини:** `id, group, brand, model, width, profile, diameter, season, studded, load_index, speed_index, year, country, price, currency, in_stock, image_url, note`
-   - **Диски:** `id, group, brand, model, diameter, width, pcd, et, dia, type, color, price, currency, in_stock, image_url, note`
+   - **Шини:** `id, group, brand, model, width, profile, diameter, season, studded, load_index, speed_index, year, country, price, currency, in_stock, on_order, image_url, note`
+   - **Диски:** `id, group, brand, model, diameter, width, pcd, et, dia, type, color, price, currency, in_stock, on_order, image_url, note`
 
    Порядок колонок не важливий — дані читаються за назвою заголовка. Колонка `id` потрібна лише
    для відгуків (див. "Відгуки на товари"); без неї каталог і сторінки товару працюють як раніше.
@@ -167,8 +167,11 @@ public/                   — статичні файли, копіюються 
 6. Зміни в клітинках таблиці підʼявляться на сайті автоматично (з затримкою до 5 хв — стільки
    тримається кеш у `sessionStorage`, щоб не бити по таблиці на кожен перехід між сторінками).
 
-Значення в колонці `studded` (шипи) і `in_stock` (наявність) можна писати як
-`так/ні`, `yes/no`, `true/false` або `+/-` — розпізнається все. Ціну можна писати з пробілами,
+Значення в колонках `studded` (шипи), `in_stock` (наявність) і `on_order` (під замовлення) можна
+писати як `так/ні`, `yes/no`, `true/false` або `+/-` — розпізнається все. Порожня клітинка (як і
+взагалі відсутня колонка) означає `ні`. `on_order` не залежить від `in_stock`: при `так` картка й
+сторінка товару показують додатковий бейдж "Під замовлення" поруч зі статусом наявності, а кнопку
+"Купити" й далі вмикає лише `in_stock`. Ціну можна писати з пробілами,
 комами чи "грн" — normalize відбувається автоматично.
 
 **Фото товару (`image_url`, обидві таблиці — "Шини" і "Диски"):** якщо клітинка порожня — картка
