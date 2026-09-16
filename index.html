@@ -687,6 +687,18 @@
 
       <p class="footer-terms" data-i18n="footer.terms">Доставка: самовивіз з магазину в Кривому Розі або Нова Пошта по всій Україні за тарифами перевізника. Повернення: 14 днів на товар належної якості — невживаний, з цілою упаковкою та комплектацією — згідно із Законом України «Про захист прав споживачів».</p>
 
+      <!-- Юридичні сторінки. href двомовний через data-i18n-attr, бо слаги цих сторінок різні
+           в UA і RU (polityka-konfidentsiynosti / politika-konfidentsialnosti) — так само, як у
+           /farbuvannya-dyskiv/ vs /pokraska-diskov/. Абсолютні шляхи від кореня: футер є і на
+           вкладених сторінках товару та кластерів. Посилання саме у футері (тобто на кожній
+           сторінці, включно з головною) — це пряма вимога Google для перекладу OAuth-згоди
+           скрипта адмінки в статус «In production»: privacy policy мусить хоститись на домені
+           головної і бути з неї злінкована. -->
+      <nav class="footer-legal" aria-label="Документи" data-i18n-attr="aria-label:footer.legalNavAria">
+        <a href="/polityka-konfidentsiynosti/" data-i18n="footer.privacyLink" data-i18n-attr="href:footer.privacyHref">Політика конфіденційності</a>
+        <a href="/umovy-prodazhu/" data-i18n="footer.termsLink" data-i18n-attr="href:footer.termsHref">Умови продажу</a>
+      </nav>
+
       <div class="footer-bottom">
         <p>© <span id="footer-year"></span> TIRE PLACE. <span data-i18n="footer.rightsReserved">Всі права захищені.</span></p>
         <p data-i18n="footer.slogan">Твій шинний простір</p>

@@ -14,7 +14,14 @@
 import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 import { root, readBuildJson } from './lib/build-dir.mjs';
 import { appendUrls } from './lib/urls.mjs';
-import { clusterLinksHtml, clusters, pageTexts, CONTENT_PAGE_KEYS, langPrefix } from './lib/cluster-links.mjs';
+import {
+  clusterLinksHtml,
+  clusters,
+  pageTexts,
+  CONTENT_PAGE_KEYS,
+  LEGAL_PAGE_KEYS,
+  langPrefix,
+} from './lib/cluster-links.mjs';
 import { makeT } from './lib/i18n.mjs';
 import { SITE_URL, PAGE_SIZE } from '../src/shared/constants.mjs';
 import { describeTire, describeWheel, catalogLabel } from '../src/shared/describe.mjs';
@@ -431,6 +438,9 @@ function main() {
     { key: 'wheels', type: 'hub', kind: 'wheels' },
     ...facetPages.map((f) => ({ key: f.key, type: 'facet', kind: f.kind, field: f.field, value: f.value })),
     ...CONTENT_PAGE_KEYS.map((key) => ({ key, type: 'content' })),
+    // Юридичні — той самий type 'content' (та сама розмітка, ті самі крихти), але окремий
+    // список: у рядок «Послуги» перелінковки вони не входять. Див. LEGAL_PAGE_KEYS.
+    ...LEGAL_PAGE_KEYS.map((key) => ({ key, type: 'content' })),
   ];
 
   // Немає тексту → падіння з ПЕРЕЛІКОМ, щоб сторінка без опису не поїхала в прод тихо.

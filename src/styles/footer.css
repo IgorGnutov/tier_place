@@ -49,6 +49,20 @@
   margin: 0 auto var(--space-lg);
 }
 
+.footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em var(--space-md);
+  justify-content: center;
+  margin-bottom: var(--space-md);
+  font-size: var(--fs-small);
+}
+
+.footer-legal a {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+}
+
 .footer-bottom {
   display: flex;
   flex-direction: column;

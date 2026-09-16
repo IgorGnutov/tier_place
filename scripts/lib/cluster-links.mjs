@@ -24,6 +24,16 @@ export const CONTENT_PAGE_KEYS = [
   'kontakty',
 ];
 
+/** Юридичні сторінки. Свідомо ОКРЕМИЙ список, а не додані в CONTENT_PAGE_KEYS: той керує
+ *  одночасно і генерацією, і рядком «Послуги» в блоці перелінковки, а політика
+ *  конфіденційності — не послуга й у тому рядку виглядала б як пункт асортименту.
+ *  Посилання на них живуть у футері index.html (звідси вони є на кожній сторінці сайту).
+ *  Причина існування: без privacy policy на власному домені, злінкованої з головної, Google
+ *  не дає перевести OAuth-згоду скрипта зі статусу «Testing» у «In production», а в «Testing»
+ *  він відкликає refresh-токен власника кожні 7 днів і адмінка з кошиком відвалюються — див.
+ *  .github/workflows/check-backend.yml. */
+export const LEGAL_PAGE_KEYS = ['polityka-konfidentsiynosti', 'umovy-prodazhu'];
+
 /** Префікс шляху для мови: RU-версії живуть під /ru/. @param {string} lang @returns {string} */
 export const langPrefix = (lang) => (lang === 'ru' ? '/ru' : '');
 

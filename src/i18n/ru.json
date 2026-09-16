@@ -142,5 +142,10 @@
   "review.sending": "Отправляем…",
   "review.errSaveFallback": "Не удалось сохранить отзыв",
   "review.thanks": "Спасибо! Отзыв появится на сайте после проверки.",
-  "review.errNetwork": "Не удалось соединиться с сервером. Проверьте интернет и попробуйте ещё раз."
+  "review.errNetwork": "Не удалось соединиться с сервером. Проверьте интернет и попробуйте ещё раз.",
+  "footer.legalNavAria": "Документы",
+  "footer.privacyLink": "Политика конфиденциальности",
+  "footer.privacyHref": "/ru/politika-konfidentsialnosti/",
+  "footer.termsLink": "Условия продажи",
+  "footer.termsHref": "/ru/usloviya-prodazhi/"
 }
