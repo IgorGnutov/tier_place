@@ -1,0 +1,89 @@
+name: Check admin backend
+
+# Пінг Apps Script Web App (CONTENT_API_URL). Причина існування: грант OAuth власника скрипта
+# періодично відмирає (4 і 16 вер. 2026), і тоді /exec віддає 403 зі сторінкою відмови Google
+# Диска — код doPost навіть не запускається. Ламає /admin, оформлення замовлень з кошика і
+# відгуки, але каталог шин/дисків працює (він читає CSV таблиці напряму), тож зовні сайт
+# виглядає живим. Двічі це виявляли вручну; цей воркфлоу знаходить поломку за ≤6 год.
+#
+# Окремий воркфлоу, а не крок у deploy.yml — щоб мертвий бекенд не робив червоним деплой
+# сайту: це незалежні поломки, і сайт має продовжувати деплоїтись.
+
+on:
+  schedule:
+    - cron: '30 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # URL не дублюємо — беремо з src/config.ts, єдиного місця для нього (див. CLAUDE.md).
+      - name: Read CONTENT_API_URL from src/config.ts
+        id: url
+        run: |
+          url="$(grep -oE 'https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec' src/config.ts | head -1)"
+          if [ -z "$url" ]; then
+            echo "::error::Не знайшов CONTENT_API_URL у src/config.ts — змінився формат рядка?"
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # Свідомо БЕЗ -X POST: він змушує curl повторити POST після 302-редиректу на
+      # script.googleusercontent.com уже без тіла, і Google віддає збиваючий з пантелику
+      # "411 Length Required" замість справжньої причини.
+      - name: Probe /exec
+        run: |
+          code=$(curl -sS -L --max-time 60 \
+            -o body.html -w '%{http_code}' \
+            -H 'Content-Type: text/plain;charset=UTF-8' \
+            --data '{"action":"__probe__"}' \
+            '${{ steps.url.outputs.url }}') || code=000
+
+          # Живий бекенд відповідає рівно цим — jsonResponse() з admin/apps-script/Code.gs
+          # на невідому дію. Перевіряємо і код, і тіло: 200 зі сторінкою-заглушкою нам не підходить.
+          if [ "$code" = "200" ] && grep -q 'Невідома дія' body.html; then
+            echo "Бекенд живий: HTTP 200, очікуване тіло." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "## Бекенд адмінки не відповідає"
+            echo
+            echo "- HTTP: \`$code\`"
+            echo "- URL: \`${{ steps.url.outputs.url }}\`"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Підпис сторінки відмови Google Диска = відкликаний OAuth-грант власника скрипта,
+          # а не налаштування розгортання. Без цієї підказки діагностика щоразу йде хибним
+          # шляхом (пароль / «Хто має доступ» / VPN / не той URL деплою).
+          if grep -q 'request-access-icon\|drive-logo' body.html; then
+            {
+              echo "**Причина: відкликано OAuth-авторизацію власника скрипта** (сторінка відмови Диска у тілі відповіді)."
+              echo
+              echo "Лікується без зміни URL і без правок у коді:"
+              echo
+              echo "1. Редактор Apps Script → запустити вручну \`testAuth\` (admin/apps-script/Code.gs)."
+              echo "2. Пройти вікно авторизації до кінця, включно з «Додатково → Перейти до … (небезпечно)»."
+              echo "3. Повторний деплой НЕ потрібен — перевірено 16 вер. 2026."
+              echo
+              echo "Щоб це не повторювалось: Apps Script → Налаштування проєкту → перевести на"
+              echo "standard GCP-проєкт і виставити статус OAuth-згоди «In production»."
+              echo "У статусі «Testing» Google відкликає refresh-токен через 7 днів."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "Сторінки відмови Диска у відповіді немає — причина інша, ніж звичний відкликаний грант."
+              echo
+              echo '```'
+              head -c 600 body.html
+              echo
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "::error::Бекенд адмінки віддав HTTP $code — /admin, замовлення з кошика і відгуки не працюють"
+          exit 1
