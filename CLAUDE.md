@@ -15,7 +15,7 @@ comments, commit-facing docs, and UI copy is Ukrainian — match that when editi
 ```bash
 npm install
 npm run dev             # Vite dev server
-npm run build           # 8-кроковий конвеєр, див. "Build pipeline" нижче
+npm run build           # 9-кроковий конвеєр, див. "Build pipeline" нижче
 npm run preview         # preview built dist/
 npm run typecheck       # tsc --noEmit
 npm run optimize:photos # scripts/optimize-photos.mjs — generate AVIF/WebP/JPEG at 480/768/1200/1920px
@@ -26,7 +26,7 @@ There is no linter configured either.
 
 ## Architecture
 
-**Build pipeline — 8 кроків, порядок трьох із них не випадковий:**
+**Build pipeline — 9 кроків, порядок трьох із них не випадковий:**
 
 ```
 1. vite build                                → dist/index.html, dist/admin/
@@ -37,6 +37,7 @@ There is no linter configured either.
 6. node scripts/generate-cluster-pages.mjs   → хаби, фасети, послуги (UA + RU)
 7. node scripts/prerender-home.mjs           → картки в dist/index.html і dist/ru/index.html
 8. node scripts/generate-sitemap.mjs         → dist/sitemap.xml
+9. node scripts/generate-merchant-feed.mjs   → dist/merchant-feed.xml (Google Merchant Center)
 ```
 
 - **Крок 2 — один фетч Sheets на весь білд.** Три незалежних звернення давали реальний шанс, що
@@ -51,7 +52,14 @@ There is no linter configured either.
   (корінь репо, у `.gitignore`, свідомо **не** в `dist/`), а фінальний крок віддає файл цілком.
   Раніше `public/sitemap.xml` містив рукописні записи, а генератор дописував перед `</urlset>` —
   із трьома генераторами це стало порядко-залежним. `public/sitemap.xml` більше немає.
-- Проміжні артефакти — тільки в `.build/`. Ніякого dev-прев'ю кроків 4–8 (`npm run dev` їх не
+- **Фід Merchant Center — крок 9, з `.build/products.json`**, який пише крок 5 (ті самі slug,
+  назви й фото власного домену). Google Таблиця як джерело даних Merchant не годиться: він читає
+  лише першу вкладку («Шини») і лише англійські атрибути (`title`, `link`, `price` = `2300 UAH`…).
+  `availability` мусить збігатися з JSON-LD `Offer` сторінки товару (Merchant звіряє):
+  `in_stock` → `in_stock`, інакше `on_order` → `backorder` + `availability_date` = білд + 3 дні
+  (`BACKORDER_DAYS`; дата не старіє, бо `deploy.yml` перезбирає кожні 6 год), інакше
+  `out_of_stock`. Товари без ціни чи фото у фід не йдуть (Merchant однаково їх відхилив би).
+- Проміжні артефакти — тільки в `.build/`. Ніякого dev-прев'ю кроків 4–9 (`npm run dev` їх не
   показує).
 
 **Спільний код клієнта і скриптів — `src/shared/*.mjs`:**

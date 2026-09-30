@@ -32,7 +32,7 @@ import {
   escapeHtml,
   escapeAttr,
 } from './lib/html-patch.mjs';
-import { root, readBuildJson } from './lib/build-dir.mjs';
+import { root, readBuildJson, writeBuildJson } from './lib/build-dir.mjs';
 import { appendUrls } from './lib/urls.mjs';
 import { langPrefix, pageTexts } from './lib/cluster-links.mjs';
 import { makeT } from './lib/i18n.mjs';
@@ -631,6 +631,16 @@ function main() {
   }
 
   collectUrls(products);
+  // Готовий перелік товарів (зі slug і фото власного домену) для фіду Merchant Center
+  // (scripts/generate-merchant-feed.mjs, крок 9) — щоб той не перераховував slug і фото
+  // вдруге і гарантовано вказував на ті самі URL, що щойно записані в dist/.
+  writeBuildJson(
+    'products.json',
+    products.map(({ reviews, ...product }) => ({
+      ...product,
+      specs: describeFor[product.kind](product.row, makeT('uk')).specs,
+    }))
+  );
   console.log(
     `${LABEL}: згенеровано ${products.length * LANGS.length} сторінок товару ` +
       `(${products.length} × ${LANGS.length} мови).`
