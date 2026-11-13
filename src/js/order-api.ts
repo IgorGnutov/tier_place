@@ -6,6 +6,7 @@ export interface OrderItemPayload {
   sizeLine: string;
   price: number | null;
   qty: number;
+  onOrder?: boolean;
 }
 
 export interface OrderPayload {

@@ -19,7 +19,7 @@ import { t, getLang, onLangChange } from './i18n';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../shared/slug.mjs';
 import { SHEET_TIRES_CSV, SHEET_WHEELS_CSV } from '../config';
 import { PAGE_SIZE } from '../shared/constants.mjs';
-import { describeTire, describeWheel, type CardInfo } from '../shared/describe.mjs';
+import { describeTire, describeWheel, availabilityOf, type CardInfo } from '../shared/describe.mjs';
 import { productCardHtml } from '../shared/product-card.mjs';
 
 interface CatalogConfig {
@@ -138,7 +138,13 @@ async function initCatalog(config: CatalogConfig): Promise<void> {
     if (!btn || btn.disabled) return;
     const info = cardsByKey.get(btn.dataset.buy ?? '');
     if (!info) return;
-    addItem({ key: info.key, title: info.title, sizeLine: info.sizeLine, price: info.price });
+    addItem({
+      key: info.key,
+      title: info.title,
+      sizeLine: info.sizeLine,
+      price: info.price,
+      onOrder: availabilityOf(info) === 'backorder',
+    });
     showToast(t('product.addedToCart', 'Додано в кошик'));
   });
 
@@ -379,7 +385,7 @@ export function initProductBuyButton(): void {
   const buyBtn = document.getElementById('product-buy-btn') as HTMLButtonElement | null;
   if (!dataEl || !buyBtn) return;
 
-  let product: { key: string; title: string; sizeLine: string; price: number | null };
+  let product: { key: string; title: string; sizeLine: string; price: number | null; onOrder?: boolean };
   try {
     product = JSON.parse(dataEl.textContent ?? '{}');
   } catch {
@@ -388,7 +394,13 @@ export function initProductBuyButton(): void {
 
   buyBtn.addEventListener('click', () => {
     if (buyBtn.disabled) return;
-    addItem({ key: product.key, title: product.title, sizeLine: product.sizeLine, price: product.price });
+    addItem({
+      key: product.key,
+      title: product.title,
+      sizeLine: product.sizeLine,
+      price: product.price,
+      onOrder: product.onOrder === true,
+    });
     showToast(t('product.addedToCart', 'Додано в кошик'));
   });
 }

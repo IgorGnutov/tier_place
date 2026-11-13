@@ -18,7 +18,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../src/shared/slug.mjs';
 import { listFacetPages, facetForProduct } from '../src/shared/clusters.mjs';
-import { describeTire, describeWheel, catalogLabel, priceText } from '../src/shared/describe.mjs';
+import { describeTire, describeWheel, catalogLabel, priceText, availabilityOf, canBuy } from '../src/shared/describe.mjs';
 import {
   replaceAttr,
   removeAll,
@@ -37,6 +37,12 @@ import { appendUrls } from './lib/urls.mjs';
 import { langPrefix, pageTexts } from './lib/cluster-links.mjs';
 import { makeT } from './lib/i18n.mjs';
 import { SITE_URL } from '../src/shared/constants.mjs';
+
+const SCHEMA_AVAILABILITY = {
+  in_stock: 'https://schema.org/InStock',
+  backorder: 'https://schema.org/BackOrder',
+  out_of_stock: 'https://schema.org/OutOfStock',
+};
 
 const LABEL = 'generate-product-pages';
 const LANGS = ['uk', 'ru'];
@@ -223,7 +229,7 @@ function buildMainHtml(product, imageSet, t, lang) {
     ? t('product.inStock', 'В наявності')
     : t('product.outOfStock', 'Немає в наявності');
   // Другий бейдж поруч зі статусом, а не замість нього: on_order у прайсі незалежний від
-  // in_stock. Кнопку "Купити" він не розблоковує — див. src/shared/product-card.mjs.
+  // in_stock. Кнопку "Купити" він сам не розблоковує — лише разом із buy_on_order (canBuy).
   const orderBadge = product.onOrder
     ? `<span class="status status--order">${escapeHtml(t('product.onOrder', 'Під замовлення'))}</span>`
     : '';
@@ -234,6 +240,8 @@ function buildMainHtml(product, imageSet, t, lang) {
     title: product.title,
     sizeLine: product.sizeLine,
     price: product.price,
+    // Позначка для кошика й Telegram-повідомлення: товару немає на складі, купують під замовлення.
+    onOrder: availabilityOf(product) === 'backorder',
   });
   // Без id у колонці "id" відгук неможливо привʼязати до товару — блок (разом із формою)
   // не рендеримо взагалі, замість того щоб збирати відгуки, які нікуди не потраплять.
@@ -250,7 +258,7 @@ function buildMainHtml(product, imageSet, t, lang) {
           <div class="status-row"><span class="status ${statusClass}">${escapeHtml(statusText)}</span>${orderBadge}</div>
           <div class="product-detail__footer">
             <span class="product-detail__price">${escapeHtml(priceText(product.price, t))}</span>
-            <button type="button" class="btn" id="product-buy-btn"${product.inStock ? '' : ' disabled'}>${escapeHtml(t('product.buy', 'Купити'))}</button>
+            <button type="button" class="btn" id="product-buy-btn"${canBuy(product) ? '' : ' disabled'}>${escapeHtml(t('product.buy', 'Купити'))}</button>
           </div>
         </div>
       </div>${reviewsHtml}
@@ -271,9 +279,17 @@ function buildProductPage(product, baseHtml, imageSet, lang, t) {
   // У шин title уже закінчується розміром ("... 195/65 R15") — без цієї перевірки опис виходив
   // із дублем. У дисків size додає PCD/ET, яких у title немає, тож він потрібен.
   const sizePart = product.sizeLine && !product.title.includes(product.sizeLine) ? `, ${product.sizeLine}` : '';
-  const metaDescription = `${product.title}${sizePart} — ${priceLine}. ${
-    product.inStock ? t('product.inStock', 'В наявності') : t('product.outOfStock', 'Немає в наявності')
-  } ${t('meta.productStoreLine', 'в автомагазині TIRE PLACE, Кривий Ріг.')}`;
+  const availability = availabilityOf(product);
+  const metaStatus =
+    availability === 'in_stock'
+      ? t('product.inStock', 'В наявності')
+      : availability === 'backorder'
+        ? t('product.onOrder', 'Під замовлення')
+        : t('product.outOfStock', 'Немає в наявності');
+  const metaDescription = `${product.title}${sizePart} — ${priceLine}. ${metaStatus} ${t(
+    'meta.productStoreLine',
+    'в автомагазині TIRE PLACE, Кривий Ріг.'
+  )}`;
   // Соцмережі краще тягнути з власного домену (стабільніше, ніж покладатись, що postimg.cc
   // лишиться доступним для скрапера) — беремо JPEG-варіант, якщо фото вдалось оптимізувати.
   const ogImageUrl = imageSet?.jpg ? `${SITE_URL}${imageSet.jpg}` : product.imageUrl;
@@ -360,13 +376,10 @@ function buildProductPage(product, baseHtml, imageSet, lang, t) {
             '@type': 'Offer',
             price: product.price,
             priceCurrency: 'UAH',
-            // BackOrder — саме той стан, що описує "немає на складі, але приймаємо замовлення";
-            // OutOfStock лишається тільки для товару, який не можна замовити взагалі.
-            availability: product.inStock
-              ? 'https://schema.org/InStock'
-              : product.onOrder
-                ? 'https://schema.org/BackOrder'
-                : 'https://schema.org/OutOfStock',
+            // BackOrder — "немає на складі, але приймаємо замовлення" (кнопка активна);
+            // OutOfStock — товар, який на сайті купити не можна, навіть із плашкою "Під
+            // замовлення". Той самий розподіл, що у фіді Merchant — див. availabilityOf.
+            availability: SCHEMA_AVAILABILITY[availabilityOf(product)],
             url: pageUrl,
             // 14 днів на товар належної якості — мінімум за Законом України «Про захист прав
             // споживачів»; той самий текст видимий у футері (footer.terms), бо Google вимагає,
@@ -545,6 +558,7 @@ function baseProduct(row, kind, slug) {
     price: info.price,
     inStock: info.inStock,
     onOrder: info.onOrder,
+    buyOnOrder: info.buyOnOrder,
     imageUrl: info.imageUrl,
     brand: info.brand,
   };

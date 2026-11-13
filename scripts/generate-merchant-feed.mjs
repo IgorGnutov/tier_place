@@ -19,10 +19,13 @@ import { writeFileSync } from 'node:fs';
 import { root, readBuildJson } from './lib/build-dir.mjs';
 import { escapeHtml } from '../src/shared/html-escape.mjs';
 import { SITE_URL } from '../src/shared/constants.mjs';
+// Той самий розподіл станів, що в JSON-LD Offer сторінки товару і в кнопці "Купити":
+// in_stock / backorder (лише з buy_on_order) / out_of_stock.
+import { availabilityOf } from '../src/shared/describe.mjs';
 
 const LABEL = 'generate-merchant-feed';
 
-// Товар "під замовлення" (немає на складі, але приймаємо замовлення) — це backorder, а Google
+// Товар "під замовлення" з активною кнопкою (немає на складі, але приймаємо замовлення) — це backorder, а Google
 // для backorder вимагає availability_date. Точної дати надходження в прайсі немає, тому
 // фіксований строк від моменту білда. Дата не "старіє": deploy.yml перезбирає сайт кожні 6 год.
 const BACKORDER_DAYS = 3;
@@ -34,14 +37,6 @@ const MAX_TITLE = 150;
 /** ISO 8601 без мілісекунд — у такому вигляді Google наводить приклади availability_date. */
 function isoDate(date) {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
-
-/** Той самий розподіл станів, що в JSON-LD Offer сторінки товару (generate-product-pages.mjs):
- *  InStock / BackOrder / OutOfStock. */
-function availabilityOf(product) {
-  if (product.inStock) return 'in_stock';
-  if (product.onOrder) return 'backorder';
-  return 'out_of_stock';
 }
 
 function productType(product) {

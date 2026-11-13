@@ -254,8 +254,12 @@ function formatItemsText_(items) {
       var qty = Number(item.qty) || 0;
       var priceText = price !== null ? price + ' грн' : 'ціна за запитом';
       var lineTotalText = price !== null ? price * qty + ' грн' : '—';
+      // onOrder = товару немає на складі, клієнт купує під замовлення (колонка buy_on_order у
+      // прайсі). Позначка потрапляє і в аркуш "Замовлення", і в Telegram — власник одразу бачить,
+      // що позицію треба замовити в постачальника.
+      var orderMark = item.onOrder === true ? ' [ПІД ЗАМОВЛЕННЯ]' : '';
       return (
-        (index + 1) + '. ' + item.title + ' (' + item.sizeLine + ') — ' + qty + ' шт. × ' + priceText + ' = ' + lineTotalText
+        (index + 1) + '. ' + item.title + ' (' + item.sizeLine + ')' + orderMark + ' — ' + qty + ' шт. × ' + priceText + ' = ' + lineTotalText
       );
     })
     .join('\n');

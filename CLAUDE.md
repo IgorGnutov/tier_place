@@ -56,9 +56,12 @@ There is no linter configured either.
   назви й фото власного домену). Google Таблиця як джерело даних Merchant не годиться: він читає
   лише першу вкладку («Шини») і лише англійські атрибути (`title`, `link`, `price` = `2300 UAH`…).
   `availability` мусить збігатися з JSON-LD `Offer` сторінки товару (Merchant звіряє):
-  `in_stock` → `in_stock`, інакше `on_order` → `backorder` + `availability_date` = білд + 3 дні
-  (`BACKORDER_DAYS`; дата не старіє, бо `deploy.yml` перезбирає кожні 6 год), інакше
-  `out_of_stock`. Товари без ціни чи фото у фід не йдуть (Merchant однаково їх відхилив би).
+  `in_stock` → `in_stock`, інакше `on_order` **і** `buy_on_order` → `backorder` +
+  `availability_date` = білд + 3 дні (`BACKORDER_DAYS`; дата не старіє, бо `deploy.yml`
+  перезбирає кожні 6 год), інакше `out_of_stock`. Правило одне — `availabilityOf()` у
+  `src/shared/describe.mjs`; з нього ж `canBuy()` вмикає кнопку "Купити" (картка, сторінка
+  товару). `on_order` без `buy_on_order` — лише плашка "Під замовлення" при неактивній кнопці,
+  тому для Google це `out_of_stock`. Товари без ціни чи фото у фід не йдуть (Merchant однаково їх відхилив би).
 - Проміжні артефакти — тільки в `.build/`. Ніякого dev-прев'ю кроків 4–9 (`npm run dev` їх не
   показує).
 

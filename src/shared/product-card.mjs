@@ -11,7 +11,7 @@
 //  3. Кнопка на статиці не має обробника взагалі, доки не стартує main.js — це нормально:
 //     клієнт перемальовує грід із живих даних одразу після завантаження.
 import { escapeHtml, escapeAttr } from './html-escape.mjs';
-import { priceText } from './describe.mjs';
+import { priceText, canBuy } from './describe.mjs';
 
 /**
  * @param {string | null} imageUrl
@@ -53,10 +53,10 @@ export function productCardHtml(info, imageManifest, t) {
     .join('');
   const statusText = info.inStock ? t('product.inStock', 'В наявності') : t('product.outOfStock', 'Немає в наявності');
   const outOfStock = t('product.outOfStock', 'Немає в наявності');
-  const buyAttrs = info.inStock ? '' : ` disabled title="${escapeAttr(outOfStock)}"`;
+  const buyAttrs = canBuy(info) ? '' : ` disabled title="${escapeAttr(outOfStock)}"`;
   // "Під замовлення" — окрема колонка прайсу (on_order), незалежна від наявності: товар може
-  // бути і в наявності, і під замовлення. Тому другий бейдж поруч, а не замість статусу, і на
-  // кнопку "Купити" він не впливає — її й далі вимикає лише in_stock.
+  // бути і в наявності, і під замовлення. Тому другий бейдж поруч, а не замість статусу. Сам
+  // по собі він кнопку не вмикає — для цього потрібна ще колонка buy_on_order (див. canBuy).
   const orderBadge = info.onOrder
     ? `<span class="status status--order">${escapeHtml(t('product.onOrder', 'Під замовлення'))}</span>`
     : '';

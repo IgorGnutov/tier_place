@@ -6,6 +6,9 @@ export interface CartItem {
   sizeLine: string;
   price: number | null;
   qty: number;
+  /** Купують під замовлення (in_stock = ні, on_order + buy_on_order = так). Необов'язкове:
+   *  позиції, збережені в localStorage до появи поля, просто вважаються наявними. */
+  onOrder?: boolean;
 }
 
 type NewCartItem = Omit<CartItem, 'qty'>;
@@ -47,6 +50,8 @@ export function addItem(item: NewCartItem, qty = 1): void {
   const existing = items.find((i) => i.key === item.key);
   if (existing) {
     existing.qty += qty;
+    // Статус міг змінитись між додаваннями (наступний білд із новим прайсом) — беремо свіжий.
+    existing.onOrder = item.onOrder;
   } else {
     items.push({ ...item, qty });
   }

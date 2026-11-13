@@ -14,6 +14,7 @@ import { parsePrice, parseBool } from './csv-values.mjs';
  *   price: number | null,
  *   inStock: boolean,
  *   onOrder: boolean,
+ *   buyOnOrder: boolean,
  *   key: string,
  *   detailUrl: string,
  *   sizeLine: string,
@@ -46,6 +47,7 @@ export function describeTire(row, t) {
     price: parsePrice(row.price),
     inStock: parseBool(row.in_stock),
     onOrder: parseBool(row.on_order),
+    buyOnOrder: parseBool(row.buy_on_order),
     key: `tires:${title}:${size}`,
     detailUrl: row.__detailUrl ?? '',
     sizeLine: size,
@@ -74,12 +76,36 @@ export function describeWheel(row, t) {
     price: parsePrice(row.price),
     inStock: parseBool(row.in_stock),
     onOrder: parseBool(row.on_order),
+    buyOnOrder: parseBool(row.buy_on_order),
     key: `wheels:${title}:${size}`,
     detailUrl: row.__detailUrl ?? '',
     sizeLine: size,
     imageUrl: row.image_url?.trim() || null,
     brand: row.brand?.trim() || null,
   };
+}
+
+/**
+ * Єдиний стан товару для кнопки "Купити", JSON-LD Offer і фіду Merchant Center — щоб сайт і
+ * Google не розійшлися (Merchant звіряє фід зі сторінкою).
+ *  - in_stock = так                          → 'in_stock'     (кнопка активна)
+ *  - інакше on_order = так і buy_on_order = так → 'backorder' (кнопка активна, купують під замовлення)
+ *  - інакше                                  → 'out_of_stock' (кнопка неактивна)
+ * on_order без buy_on_order лишає лише плашку "Під замовлення" з неактивною кнопкою — для
+ * Google це out_of_stock: купити на сайті не можна, а backorder привів би покупця з оголошення
+ * до неактивної кнопки.
+ * @param {{ inStock: boolean, onOrder: boolean, buyOnOrder?: boolean }} info
+ * @returns {'in_stock' | 'backorder' | 'out_of_stock'}
+ */
+export function availabilityOf(info) {
+  if (info.inStock) return 'in_stock';
+  if (info.onOrder && info.buyOnOrder) return 'backorder';
+  return 'out_of_stock';
+}
+
+/** Чи активна кнопка "Купити". @param {{ inStock: boolean, onOrder: boolean, buyOnOrder?: boolean }} info */
+export function canBuy(info) {
+  return availabilityOf(info) !== 'out_of_stock';
 }
 
 /** Ярлик каталогу для крихт і заголовків. @param {'tires'|'wheels'} kind @param {Translate} t */

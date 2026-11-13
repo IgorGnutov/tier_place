@@ -53,7 +53,11 @@ function renderItemsList(container: HTMLElement, items: CartItem[]): void {
     li.innerHTML = `
       <div class="cart-item__info">
         <span class="cart-item__title">${item.title}</span>
-        <span class="cart-item__size">${item.sizeLine}</span>
+        <span class="cart-item__size">${item.sizeLine}</span>${
+          item.onOrder
+            ? `<span class="status status--order">${t('product.onOrder', 'Під замовлення')}</span>`
+            : ''
+        }
         <span class="cart-item__price">${formatPrice(item.price)}</span>
       </div>
       <div class="cart-item__qty">
@@ -166,7 +170,13 @@ function buildCheckoutForm(): HTMLFormElement {
       npCity: deliveryMethod === 'np' ? String(data.get('npCity') ?? '').trim() : undefined,
       npBranch: deliveryMethod === 'np' ? String(data.get('npBranch') ?? '').trim() : undefined,
       comment: String(data.get('comment') ?? '').trim() || undefined,
-      items: getItems().map((i) => ({ title: i.title, sizeLine: i.sizeLine, price: i.price, qty: i.qty })),
+      items: getItems().map((i) => ({
+        title: i.title,
+        sizeLine: i.sizeLine,
+        price: i.price,
+        qty: i.qty,
+        onOrder: i.onOrder === true,
+      })),
       total: getTotal(),
     };
 
