@@ -144,6 +144,14 @@ There is no linter configured either.
 
 **Product detail pages (`/tires/<slug>/`, `/wheels/<slug>/` + RU-дзеркала під `/ru/`) —
 generated at build time, not client-rendered:**
+- **Виняток — статус, ціна й кнопка "Купити":** `initProductBuyButton` у `render-products.ts`
+  після старту перечитує живу таблицю (той самий `loadLiveCsv` із кешем, що в каталозі) і
+  підміняє `.status-row`, `.product-detail__price` і `disabled` кнопки. Рядок шукається за
+  `kind`+`slug` з `#product-data` через `dedupeSlugs` по всьому листу — тим самим порядком, що
+  в білді, тож суфікси `-2` збігаються. Таблиця недоступна → лишається статика; рядка немає →
+  "Немає в наявності" й неактивна кнопка. Плашки малює одна `statusBadgesHtml`
+  (`src/shared/product-card.mjs`) для картки, генератора й клієнта. JSON-LD, meta і фід
+  Merchant лишаються зі знімка білда — до 6 год вони можуть відставати від видимого статусу.
 - `scripts/generate-product-pages.mjs` (крок 5) читає `.build/data.json` і на кожен рядок пише
   **дві** сторінки: UA клонується з `dist/index.html`, RU — з **уже перекладеної**
   `dist/ru/index.html` (звідси й порядок: крок 5 після 4, як і крок 6). Замінює вміст

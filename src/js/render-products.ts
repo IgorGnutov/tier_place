@@ -19,8 +19,8 @@ import { t, getLang, onLangChange } from './i18n';
 import { dedupeSlugs, tireSlug, wheelSlug } from '../shared/slug.mjs';
 import { SHEET_TIRES_CSV, SHEET_WHEELS_CSV } from '../config';
 import { PAGE_SIZE } from '../shared/constants.mjs';
-import { describeTire, describeWheel, availabilityOf, type CardInfo } from '../shared/describe.mjs';
-import { productCardHtml } from '../shared/product-card.mjs';
+import { describeTire, describeWheel, availabilityOf, canBuy, priceText, type CardInfo } from '../shared/describe.mjs';
+import { productCardHtml, statusBadgesHtml } from '../shared/product-card.mjs';
 
 interface CatalogConfig {
   idPrefix: 'tires' | 'wheels';
@@ -377,6 +377,16 @@ export function initCatalogTabs(): void {
   if (window.location.hash === '#wheels') activate('wheels');
 }
 
+interface StaticProduct {
+  key: string;
+  title: string;
+  sizeLine: string;
+  price: number | null;
+  onOrder?: boolean;
+  kind?: 'tires' | 'wheels';
+  slug?: string;
+}
+
 /** Кнопка "Купити" на статичній сторінці товару (generate-product-pages.mjs). No-op на будь-якій
  *  іншій сторінці, де #product-data/#product-buy-btn відсутні — картка каталогу має свою окрему
  *  логіку в renderCard(). */
@@ -385,13 +395,15 @@ export function initProductBuyButton(): void {
   const buyBtn = document.getElementById('product-buy-btn') as HTMLButtonElement | null;
   if (!dataEl || !buyBtn) return;
 
-  let product: { key: string; title: string; sizeLine: string; price: number | null; onOrder?: boolean };
+  let product: StaticProduct;
   try {
     product = JSON.parse(dataEl.textContent ?? '{}');
   } catch {
     return;
   }
 
+  // Обробник читає product у момент кліку, а не при старті — refreshProductFromSheet нижче
+  // підміняє в ньому ціну й позначку "під замовлення" живими значеннями.
   buyBtn.addEventListener('click', () => {
     if (buyBtn.disabled) return;
     addItem({
@@ -403,4 +415,45 @@ export function initProductBuyButton(): void {
     });
     showToast(t('product.addedToCart', 'Додано в кошик'));
   });
+
+  void refreshProductFromSheet(product, buyBtn);
+}
+
+/**
+ * Статус, ціна й кнопка "Купити" на сторінці товару — з живої таблиці, як у каталозі, а не зі
+ * знімка прайсу на момент білда (інакше правка в таблиці доходила б сюди лише з деплоєм, до 6 год).
+ * Решта сторінки (назва, фото, характеристики, JSON-LD для Google) лишається з білда.
+ *
+ * Рядок шукається за тим самим slug, з якого білд зробив URL сторінки (dedupeSlugs по всьому
+ * листу в тому ж порядку — суфікси -2 збігаються). Таблиця недоступна → лишаємо статику.
+ * Таблиця доступна, але рядка вже немає (видалили, перейменували) → "Немає в наявності" й
+ * неактивна кнопка: сторінка доживає до наступного деплою, і замовити те, чого вже немає в
+ * прайсі, не можна.
+ */
+async function refreshProductFromSheet(product: StaticProduct, buyBtn: HTMLButtonElement): Promise<void> {
+  const { kind, slug } = product;
+  if (!kind || !slug) return;
+
+  const result = await loadLiveCsv(kind === 'tires' ? SHEET_TIRES_CSV : SHEET_WHEELS_CSV);
+  if (result.source === 'error') return;
+
+  const rows = result.rows;
+  const slugs = dedupeSlugs(rows, kind === 'tires' ? tireSlug : wheelSlug);
+  const index = slugs.indexOf(slug);
+  const info = index === -1 ? null : (kind === 'tires' ? describeTire : describeWheel)(rows[index], t);
+
+  const statusRow = document.querySelector('.product-detail .status-row');
+  const priceEl = document.querySelector('.product-detail__price');
+
+  if (!info) {
+    if (statusRow) statusRow.innerHTML = statusBadgesHtml({ inStock: false, onOrder: false }, t);
+    buyBtn.disabled = true;
+    return;
+  }
+
+  if (statusRow) statusRow.innerHTML = statusBadgesHtml(info, t);
+  if (priceEl) priceEl.textContent = priceText(info.price, t);
+  buyBtn.disabled = !canBuy(info);
+  product.price = info.price;
+  product.onOrder = availabilityOf(info) === 'backorder';
 }

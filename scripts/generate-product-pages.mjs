@@ -37,6 +37,7 @@ import { appendUrls } from './lib/urls.mjs';
 import { langPrefix, pageTexts } from './lib/cluster-links.mjs';
 import { makeT } from './lib/i18n.mjs';
 import { SITE_URL } from '../src/shared/constants.mjs';
+import { statusBadgesHtml } from '../src/shared/product-card.mjs';
 
 const SCHEMA_AVAILABILITY = {
   in_stock: 'https://schema.org/InStock',
@@ -224,15 +225,6 @@ function breadcrumbsHtml(crumbs, t) {
 function buildMainHtml(product, imageSet, t, lang) {
   const photoHtml = buildPhotoHtml(product, imageSet, t);
   const specsHtml = product.specs.map((s) => `<li>${escapeHtml(s.label)}: ${escapeHtml(s.value)}</li>`).join('');
-  const statusClass = product.inStock ? 'status--in' : 'status--out';
-  const statusText = product.inStock
-    ? t('product.inStock', 'В наявності')
-    : t('product.outOfStock', 'Немає в наявності');
-  // Другий бейдж поруч зі статусом, а не замість нього: on_order у прайсі незалежний від
-  // in_stock. Кнопку "Купити" він сам не розблоковує — лише разом із buy_on_order (canBuy).
-  const orderBadge = product.onOrder
-    ? `<span class="status status--order">${escapeHtml(t('product.onOrder', 'Під замовлення'))}</span>`
-    : '';
 
   const productData = jsonForScript({
     id: product.productId,
@@ -242,6 +234,10 @@ function buildMainHtml(product, imageSet, t, lang) {
     price: product.price,
     // Позначка для кошика й Telegram-повідомлення: товару немає на складі, купують під замовлення.
     onOrder: availabilityOf(product) === 'backorder',
+    // kind + slug — щоб клієнт знайшов рядок цього товару в живій таблиці й оновив статус,
+    // ціну й кнопку без деплою (render-products.ts → initProductBuyButton).
+    kind: product.kind,
+    slug: product.slug,
   });
   // Без id у колонці "id" відгук неможливо привʼязати до товару — блок (разом із формою)
   // не рендеримо взагалі, замість того щоб збирати відгуки, які нікуди не потраплять.
@@ -255,7 +251,7 @@ function buildMainHtml(product, imageSet, t, lang) {
         <div class="product-detail__body">
           <h1 class="product-detail__title">${escapeHtml(product.title)}</h1>
           <ul class="product-detail__specs">${specsHtml}</ul>
-          <div class="status-row"><span class="status ${statusClass}">${escapeHtml(statusText)}</span>${orderBadge}</div>
+          <div class="status-row">${statusBadgesHtml(product, t)}</div>
           <div class="product-detail__footer">
             <span class="product-detail__price">${escapeHtml(priceText(product.price, t))}</span>
             <button type="button" class="btn" id="product-buy-btn"${canBuy(product) ? '' : ' disabled'}>${escapeHtml(t('product.buy', 'Купити'))}</button>

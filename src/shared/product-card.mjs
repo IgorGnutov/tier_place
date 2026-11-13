@@ -38,6 +38,25 @@ function photoHtml(imageUrl, title, optimized) {
 }
 
 /**
+ * Вміст `.status-row`: статус наявності + бейдж "Під замовлення". Один рядок HTML на картку
+ * каталогу, статичну сторінку товару (generate-product-pages.mjs) і її оновлення з живої
+ * таблиці в браузері (render-products.ts → initProductBuyButton) — щоб три місця не розійшлись.
+ * "Під замовлення" — окрема колонка прайсу (on_order), незалежна від наявності: товар може бути
+ * і в наявності, і під замовлення. Тому другий бейдж поруч, а не замість статусу. Сам по собі він
+ * кнопку "Купити" не вмикає — для цього потрібна ще колонка buy_on_order (див. canBuy).
+ * @param {{ inStock: boolean, onOrder: boolean }} info
+ * @param {import('./describe.mjs').Translate} t
+ * @returns {string}
+ */
+export function statusBadgesHtml(info, t) {
+  const statusText = info.inStock ? t('product.inStock', 'В наявності') : t('product.outOfStock', 'Немає в наявності');
+  const orderBadge = info.onOrder
+    ? `<span class="status status--order">${escapeHtml(t('product.onOrder', 'Під замовлення'))}</span>`
+    : '';
+  return `<span class="status ${info.inStock ? 'status--in' : 'status--out'}">${escapeHtml(statusText)}</span>` + orderBadge;
+}
+
+/**
  * @param {import('./describe.mjs').CardInfo} info
  * @param {Record<string, { avif?: string, webp?: string, jpg?: string }>} imageManifest
  * @param {import('./describe.mjs').Translate} t
@@ -51,15 +70,8 @@ export function productCardHtml(info, imageManifest, t) {
   const specs = info.specs
     .map((s) => `<li>${escapeHtml(s.label)}: ${escapeHtml(s.value)}</li>`)
     .join('');
-  const statusText = info.inStock ? t('product.inStock', 'В наявності') : t('product.outOfStock', 'Немає в наявності');
   const outOfStock = t('product.outOfStock', 'Немає в наявності');
   const buyAttrs = canBuy(info) ? '' : ` disabled title="${escapeAttr(outOfStock)}"`;
-  // "Під замовлення" — окрема колонка прайсу (on_order), незалежна від наявності: товар може
-  // бути і в наявності, і під замовлення. Тому другий бейдж поруч, а не замість статусу. Сам
-  // по собі він кнопку не вмикає — для цього потрібна ще колонка buy_on_order (див. canBuy).
-  const orderBadge = info.onOrder
-    ? `<span class="status status--order">${escapeHtml(t('product.onOrder', 'Під замовлення'))}</span>`
-    : '';
 
   return (
     `<article class="product-card">` +
@@ -68,10 +80,7 @@ export function productCardHtml(info, imageManifest, t) {
     `<h3 class="product-card__title">${escapeHtml(info.title)}</h3>` +
     `</a>` +
     `<ul class="product-card__specs">${specs}</ul>` +
-    `<div class="status-row">` +
-    `<span class="status ${info.inStock ? 'status--in' : 'status--out'}">${escapeHtml(statusText)}</span>` +
-    orderBadge +
-    `</div>` +
+    `<div class="status-row">${statusBadgesHtml(info, t)}</div>` +
     `<div class="product-card__footer">` +
     `<span class="product-card__price">${escapeHtml(priceText(info.price, t))}</span>` +
     `<div class="product-card__actions">` +
